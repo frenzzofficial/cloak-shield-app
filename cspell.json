@@ -1,0 +1,27 @@
+{
+	"version": "0.2",
+	"language": "en",
+	"words": [
+		"biomejs",
+		"chev",
+		"cloak",
+		"commitlint",
+		"drizzle",
+		"elysia",
+		"elysiajs",
+		"enotfound",
+		"getaddrinfo",
+		"HSTS",
+		"jose",
+		"knip",
+		"navlinks",
+		"nosniff",
+		"prettify",
+		"secretlint",
+		"sometoken",
+		"stringbool",
+		"vercel",
+		"zod"
+	],
+	"ignorePaths": ["bun.lock", "dist", "coverage", "node_modules"]
+}

@@ -1,0 +1,99 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+
+	"files": {
+		"includes": [
+			"**",
+			"!node_modules",
+			"!.git",
+			"!.vercel",
+			"!dist",
+			"!coverage",
+			"!bun.lock",
+			"!src/assets",
+			"!public",
+			"!*.lock"
+		]
+	},
+
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 4,
+		"lineWidth": 100,
+		"lineEnding": "lf",
+		"attributePosition": "auto",
+		"bracketSpacing": true,
+		"formatWithErrors": false
+	},
+
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"complexity": {
+				"noForEach": "error",
+				"useLiteralKeys": "error"
+			},
+			"performance": {
+				"noBarrelFile": "off",
+				"noAccumulatingSpread": "error"
+			},
+			"suspicious": {
+				"noExplicitAny": "error",
+				"noConsole": "error",
+				"noEvolvingTypes": "error"
+			},
+			"style": {
+				"noNonNullAssertion": "error",
+				"useImportType": "error",
+				"useNodejsImportProtocol": "error",
+				"useConst": "error",
+				"noParameterAssign": "error"
+			},
+			"correctness": {
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error",
+				"noUnusedFunctionParameters": "error"
+			}
+		}
+	},
+
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"semicolons": "always",
+			"jsxQuoteStyle": "double",
+			"trailingCommas": "all",
+			"arrowParentheses": "always",
+			"quoteProperties": "asNeeded",
+			"bracketSameLine": false
+		}
+	},
+
+	"json": {
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["tests/**"],
+			"linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+		}
+	]
+}

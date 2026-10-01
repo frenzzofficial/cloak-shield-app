@@ -1,0 +1,35 @@
+{
+	"compilerOptions": {
+		// Runtime & language
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"types": ["bun"],
+
+		// Modules
+		"module": "Preserve",
+		"moduleDetection": "force",
+		"moduleResolution": "bundler",
+
+		// Imports
+		"verbatimModuleSyntax": true,
+		"allowImportingTsExtensions": true,
+
+		// TypeScript
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+
+		// Safety
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+
+		// Project conventions
+		"allowJs": false,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noPropertyAccessFromIndexSignature": false
+	},
+	"include": ["src/**/*.ts", "tests/**/*.ts"],
+	"exclude": ["node_modules", "dist"]
+}

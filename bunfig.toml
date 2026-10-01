@@ -1,0 +1,7 @@
+[install]
+exact = false
+frozenLockfile = false
+
+[test]
+coverage = false
+coverageThreshold = { line = 0.8, function = 0.8 }

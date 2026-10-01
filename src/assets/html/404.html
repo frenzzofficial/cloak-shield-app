@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>404 — Page Not Found</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <script src="/assets/js/theme-manager.js"></script>
+  <link rel="stylesheet" href="/assets/css/styles/not-found.css" />
+
+</head>
+
+<body>
+  <div class=" card">
+    <!-- ── Window chrome ──────────────────────────────────── -->
+    <div class="card-bar">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="bar-label">HTTP 404</span>
+    </div>
+
+    <!-- ── Main content ───────────────────────────────────── -->
+    <div class="card-body">
+      <div class="code-block">
+        <span class="status-num">4<span class="mid">0</span>4</span>
+      </div>
+
+      <div class="err-badge">
+        <span class="err-dot"></span>
+        Page not found
+      </div>
+
+      <h1>Nothing lives here</h1>
+      <p class="subtitle">
+        The route you requested doesn't exist on this server. Check the URL or head back to the
+        homepage.
+      </p>
+
+      <!-- The server injects the requested path into #requested-path -->
+      <div class="path-echo">
+        <div class="path-echo-label">Requested path</div>
+        <div class="path-echo-value">
+          <span id="requested-path">
+            <script>
+              document.currentScript.parentElement.textContent =
+                window.location.pathname +
+                window.location.search +
+                window.location.hash;
+            </script>
+          </span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="/" class="btn btn-primary"> ← Go home </a>
+        <a href="/health" class="btn btn-ghost"> Health check </a>
+      </div>
+    </div>
+
+    <!-- ── Card footer ────────────────────────────────────── -->
+    <div class="card-footer">
+      <span class="footer-hint"> Looking for the API? Routes start with <code>/app</code> </span>
+      <span class="health-link">
+        <a href="/health">/health</a>
+      </span>
+    </div>
+  </div>
+</body>
+<script>
+  ThemeManager.init({
+    themePath: "/assets/css/themes",
+
+    themes: [
+      "cyantrix-theme",
+      // "emerald-theme",
+      // "rose-theme",
+      // "violet-theme",
+      // "ocean-theme",
+      // "coffee-theme"
+    ],
+
+    defaultTheme: "cyantrix-theme",
+    defaultMode: "system"
+  });
+</script>
+
+</html>

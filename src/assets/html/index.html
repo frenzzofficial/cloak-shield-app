@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>cloak-shield — Lightweight Authentication Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0A0D1A;
+      --panel: #121629;
+      --panel-2: #161B34;
+      --line: #242A47;
+      --teal: #4DE8C8;
+      --teal-dim: #2E9E8A;
+      --violet: #8C7EFF;
+      --violet-dim: #6156C4;
+      --text: #E7E9F5;
+      --muted: #8087AD;
+      --muted-2: #5C6288;
+      --danger: #FF7A7A;
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: var(--teal);
+      color: #06110E;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    @media (max-width:640px) {
+      .wrap {
+        padding: 0 20px;
+      }
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    code,
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    /* background grid + glow */
+    .field {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background:
+        radial-gradient(60% 45% at 78% 8%, rgba(140, 126, 255, 0.16), transparent 60%),
+        radial-gradient(50% 40% at 8% 38%, rgba(77, 232, 200, 0.10), transparent 60%),
+        var(--bg);
+    }
+
+    .field::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(231, 233, 245, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(231, 233, 245, 0.035) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: linear-gradient(180deg, transparent, black 12%, black 55%, transparent 92%);
+    }
+
+    /* nav */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding-top: env(safe-area-inset-top, 0px);
+      background: rgba(10, 13, 26, 0.78);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .brand svg {
+      width: 22px;
+      height: 22px;
+      flex: none;
+    }
+
+    .navlinks {
+      display: flex;
+      gap: 34px;
+      align-items: center;
+    }
+
+    .navlinks a {
+      color: var(--muted);
+      font-size: 14.5px;
+      transition: color .15s ease;
+    }
+
+    .navlinks a:hover {
+      color: var(--text);
+    }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14.5px;
+      font-weight: 500;
+      border: 1px solid var(--line);
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-ghost {
+      color: var(--text);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--muted-2);
+    }
+
+    .btn-solid {
+      background: linear-gradient(135deg, var(--teal), var(--violet));
+      color: #06110E;
+      border: none;
+      font-weight: 600;
+    }
+
+    .btn-solid:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-solid svg {
+      stroke: #06110E;
+    }
+
+    @media (max-width:860px) {
+      .navlinks {
+        display: none;
+      }
+    }
+
+    /* hero */
+    .hero {
+      padding: 88px 0 76px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    @media (max-width:980px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+    }
+
+    .eyebrow-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13.5px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow-line .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 10px var(--teal);
+      flex: none;
+    }
+
+    .hero h1 {
+      font-size: clamp(34px, 4.6vw, 54px);
+      line-height: 1.08;
+      max-width: 14ch;
+    }
+
+    .hero h1 .scramble {
+      color: var(--teal);
+    }
+
+    .hero p.lead {
+      margin-top: 22px;
+      max-width: 52ch;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stack-row {
+      display: flex;
+      gap: 22px;
+      margin-top: 44px;
+      flex-wrap: wrap;
+      color: var(--muted-2);
+      font-size: 13px;
+    }
+
+    .stack-row span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 5px 0;
+      border-bottom: 1px solid transparent;
+    }
+
+    .stack-row span::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--muted-2);
+    }
+
+    /* terminal panel */
+    .terminal {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-2);
+    }
+
+    .terminal-bar i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--line);
+    }
+
+    .terminal-bar .path {
+      margin-left: 8px;
+      color: var(--muted);
+      font-size: 12.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .terminal pre {
+      margin: 0;
+      padding: 22px 20px 26px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.2px;
+      line-height: 1.75;
+      color: #C7CBE6;
+      overflow-x: auto;
+    }
+
+    .terminal pre .c1 {
+      color: var(--muted-2);
+    }
+
+    .terminal pre .k {
+      color: var(--violet);
+    }
+
+    .terminal pre .s {
+      color: var(--teal);
+    }
+
+    .terminal pre .f {
+      color: #B9C4FF;
+    }
+
+    .terminal pre .n {
+      color: #FFC98B;
+    }
+
+    /* section shell */
+    section {
+      padding: 96px 0;
+    }
+
+    .section-head {
+      max-width: 60ch;
+      margin-bottom: 52px;
+    }
+
+    .section-head .kicker {
+      color: var(--teal);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      font-size: clamp(26px, 3.2vw, 36px);
+      line-height: 1.2;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      margin-top: 16px;
+      font-size: 16px;
+      max-width: 56ch;
+    }
+
+    hr.rule {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 0;
+    }
+
+    /* about */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: start;
+    }
+
+    @media (max-width:860px) {
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .about-grid p {
+      color: var(--muted);
+      font-size: 16px;
+      margin: 0 0 18px;
+    }
+
+    .about-grid p strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .metric-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric:first-child {
+      padding-top: 0;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 14.5px;
+    }
+
+    .metric .value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--teal);
+      font-size: 15px;
+    }
+
+    /* features */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    @media (max-width:980px) {
+      .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width:560px) {
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature {
+      background: var(--panel);
+      padding: 30px 26px 32px;
+      transition: background .18s ease;
+    }
+
+    .feature:hover {
+      background: var(--panel-2);
+    }
+
+    .feature .icon {
+      width: 38px;
+      height: 38px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      background: rgba(77, 232, 200, 0.08);
+      border: 1px solid rgba(77, 232, 200, 0.25);
+    }
+
+    .feature .icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--teal);
+    }
+
+    .feature h3 {
+      font-size: 17px;
+      margin-bottom: 10px;
+    }
+
+    .feature p {
+      color: var(--muted);
+      font-size: 14.5px;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* how it works — genuine sequence */
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      position: relative;
+    }
+
+    @media (max-width:860px) {
+      .flow {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+    }
+
+    .flow-step {
+      position: relative;
+      padding-right: 24px;
+    }
+
+    .flow-step .num {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--violet);
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .flow-step h4 {
+      font-size: 15.5px;
+      margin-bottom: 8px;
+    }
+
+    .flow-step p {
+      color: var(--muted);
+      font-size: 13.8px;
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    .flow-step::after {
+      content: '';
+      position: absolute;
+      top: 9px;
+      right: 0;
+      width: 24px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--muted-2), transparent);
+    }
+
+    .flow-step:last-child::after {
+      display: none;
+    }
+
+    @media (max-width:860px) {
+      .flow-step::after {
+        display: none;
+      }
+    }
+
+    /* build chain (tooling) */
+    .chain {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chain-item {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 22px;
+      padding: 26px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .chain-item:last-child {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chain-item .idx {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted-2);
+      font-size: 13px;
+      padding-top: 3px;
+    }
+
+    .chain-item h4 {
+      font-size: 16.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chain-item h4 code {
+      font-size: 13px;
+      color: var(--teal);
+      background: rgba(77, 232, 200, 0.08);
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid rgba(77, 232, 200, 0.2);
+    }
+
+    .chain-item p {
+      color: var(--muted);
+      font-size: 14.8px;
+      margin: 0;
+      max-width: 64ch;
+    }
+
+    /* tech stack */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width:860px) {
+      .stack-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stack-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      background: var(--panel);
+    }
+
+    .stack-card .tag {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--violet);
+      font-size: 12.5px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .stack-card h4 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .stack-card p {
+      color: var(--muted);
+      font-size: 13.6px;
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    /* cta */
+    .cta {
+      border-radius: 18px;
+      padding: 64px 48px;
+      background:
+        radial-gradient(80% 120% at 15% 0%, rgba(140, 126, 255, 0.16), transparent 60%),
+        radial-gradient(70% 100% at 85% 100%, rgba(77, 232, 200, 0.14), transparent 60%),
+        var(--panel);
+      border: 1px solid var(--line);
+      text-align: left;
+    }
+
+    @media (max-width:640px) {
+      .cta {
+        padding: 44px 26px;
+      }
+    }
+
+    .cta h2 {
+      font-size: clamp(24px, 3.4vw, 34px);
+      max-width: 20ch;
+    }
+
+    .cta p {
+      color: var(--muted);
+      margin-top: 16px;
+      max-width: 52ch;
+      font-size: 16px;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 14px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .cta-install {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      color: var(--teal);
+      background: rgba(77, 232, 200, 0.08);
+      border: 1px solid rgba(77, 232, 200, 0.22);
+      padding: 11px 16px;
+      border-radius: 8px;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 40px 0;
+    }
+
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-row .brand {
+      font-size: 15px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 26px;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      font-size: 13.8px;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    .footer-note {
+      color: var(--muted-2);
+      font-size: 12.8px;
+      margin-top: 18px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="field"></div>
+
+  <header>
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="#top">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" stroke="url(#g1)" stroke-width="1.6"
+              stroke-linejoin="round" />
+            <defs>
+              <linearGradient id="g1" x1="4" y1="2" x2="20" y2="22">
+                <stop stop-color="#4DE8C8" />
+                <stop offset="1" stop-color="#8C7EFF" />
+              </linearGradient>
+            </defs>
+          </svg>
+          cloak-shield
+        </a>
+        <div class="navlinks">
+          <a href="#about">About</a>
+          <a href="#features">Features</a>
+          <a href="#flow">How it works</a>
+          <a href="#quality">Engineering</a>
+          <a href="#stack">Stack</a>
+        </div>
+        <div class="nav-cta">
+          <a class="btn btn-ghost" href="/docs">Documentation</a>
+          <a class="btn btn-solid" href="/openapi">Open-API</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow-line"><span class="dot"></span>Open-source · self-hosted · built for production</div>
+          <h1>Authentication your backend team can actually own.<span class="scramble" id="scramble"> </span></h1>
+          <p class="lead">cloak-shield is a lightweight, scalable authentication service built on Elysia, Drizzle ORM,
+            PostgreSQL and TypeScript — the login, session and token layer most teams rebuild from scratch, done once,
+            done properly.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-solid" href="#get-started">Deploy in your stack <svg width="15" height="15"
+                viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M13 5l7 7-7 7" />
+              </svg></a>
+            <a class="btn btn-ghost" href="#flow">See the auth flow</a>
+          </div>
+          <div class="stack-row">
+            <span>Elysia</span><span>Drizzle ORM</span><span>PostgreSQL</span><span>TypeScript</span>
+          </div>
+        </div>
+
+        <div class="terminal">
+          <div class="terminal-bar">
+            <i></i><i></i><i></i>
+            <span class="path">auth.session.ts</span>
+          </div>
+          <pre><span class="c1">// issue a session after credential check</span>
+<span class="k">const</span> session = <span class="k">await</span> <span class="f">cloakShield</span>.<span class="f">auth</span>.<span class="f">login</span>({
+  identifier: <span class="s">"dev@company.com"</span>,
+  method: <span class="s">"email"</span>,
+  password,
+});
+
+<span class="c1">// cookie-based JWT, rotated on use</span>
+res.<span class="f">cookie</span>(<span class="s">"cs_session"</span>, session.token, {
+  httpOnly: <span class="k">true</span>,
+  secure: <span class="k">true</span>,
+  sameSite: <span class="s">"lax"</span>,
+  maxAge: <span class="n">60</span> * <span class="n">60</span> * <span class="n">24</span> * <span class="n">7</span>,
+});
+
+<span class="c1">// refresh silently, no re-login</span>
+<span class="k">await</span> <span class="f">cloakShield</span>.<span class="f">auth</span>.<span class="f">refresh</span>(session.refreshToken);</pre>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ABOUT -->
+    <section id="about">
+      <div class="wrap">
+        <div class="about-grid">
+          <div>
+            <div class="section-head" style="margin-bottom:24px;">
+              <div class="kicker">// why cloak-shield exists</div>
+              <h2>Auth is small enough to seem simple, and dangerous enough to get wrong.</h2>
+            </div>
+            <p>Most teams don't want to build authentication — they want it to already be built. But off-the-shelf
+              identity platforms bring vendor lock-in, opaque pricing and a runtime you don't control, while rolling
+              your own means re-deriving password hashing, token rotation and session invalidation under deadline
+              pressure.</p>
+            <p><strong>cloak-shield sits in between.</strong> It's a service you deploy inside your own infrastructure —
+              Postgres you already run, TypeScript your team already reads — with the hard parts of session and token
+              management handled correctly from the first commit.</p>
+          </div>
+          <div>
+            <div class="metric-list">
+              <div class="metric"><span class="label">Runtime</span><span class="value">Elysia (Bun)</span></div>
+              <div class="metric"><span class="label">Data layer</span><span class="value">Drizzle ORM →
+                  PostgreSQL</span></div>
+              <div class="metric"><span class="label">Session model</span><span class="value">Cookie JWT +
+                  rotation</span></div>
+              <div class="metric"><span class="label">API docs</span><span class="value">OpenAPI 3.0 / Swagger UI</span>
+              </div>
+              <div class="metric"><span class="label">Language</span><span class="value">TypeScript, strict mode</span>
+              </div>
+              <div class="metric" style="border-bottom:none;"><span class="label">License</span><span
+                  class="value">Self-hosted, source-available</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">// what ships in the box</div>
+          <h2>Four pieces, built to be read on day one</h2>
+          <p>Every module is isolated enough that a new engineer can open one folder and understand what it owns,
+            without reading the whole service first.</p>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              </svg></div>
+            <h3>Modular API</h3>
+            <p>Feature-based architecture with isolated routes, controllers, middleware and services, so any one module
+              can be changed without rippling through the rest.</p>
+          </div>
+          <div class="feature">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M4 4h16v16H4z" />
+                <path d="M4 9h16M9 9v11" />
+              </svg></div>
+            <h3>OpenAPI</h3>
+            <p>Interactive API documentation powered by Swagger UI and modular OpenAPI 3.0 specifications — every
+              endpoint is explore before you write a client.</p>
+          </div>
+          <div class="feature">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" />
+              </svg></div>
+            <h3>Authentication</h3>
+            <p>Secure email and phone authentication with cookie-based JWT sessions and refresh token rotation, so
+              long-lived sessions don't mean long-lived risk.</p>
+          </div>
+          <div class="feature">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
+              </svg></div>
+            <h3>Enterprise ready</h3>
+            <p>Centralized configuration, environment validation, security middleware and production deployment support
+              out of the box.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- HOW IT WORKS -->
+    <section id="flow">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">// the session lifecycle</div>
+          <h2>What happens on every login, in order</h2>
+          <p>This is the actual sequence a request goes through — nothing hidden, nothing implied.</p>
+        </div>
+        <div class="flow">
+          <div class="flow-step">
+            <span class="num">01</span>
+            <h4>Credential check</h4>
+            <p>Email/phone + password (or code) validated against salted, hashed records — never stored or logged in
+              plain text.</p>
+          </div>
+          <div class="flow-step">
+            <span class="num">02</span>
+            <h4>Identity verified</h4>
+            <p>A short-lived verification step confirms the account is active and not locked, rate-limited or flagged.
+            </p>
+          </div>
+          <div class="flow-step">
+            <span class="num">03</span>
+            <h4>Session issued</h4>
+            <p>A signed JWT is set as an httpOnly, secure cookie — never exposed to client-side JavaScript.</p>
+          </div>
+          <div class="flow-step">
+            <span class="num">04</span>
+            <h4>Token rotated</h4>
+            <p>Each refresh invalidates the previous token, so a leaked token has a short, bounded lifetime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- ENGINEERING QUALITY / BUILD CHAIN -->
+    <section id="quality">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">// how it's built, not just what it does</div>
+          <h2>Production discipline, added one layer at a time</h2>
+          <p>Each piece below was added deliberately, and each one earns its place — here's what it does and why it's
+            there.</p>
+        </div>
+
+        <div class="chain">
+          <div class="chain-item">
+            <span class="idx">01</span>
+            <div>
+              <h4>TypeScript, strict mode <code>strict: true</code></h4>
+              <p>No implicit any, no silent nulls. Errors surface at compile time instead of in a customer's session.
+              </p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">02</span>
+            <div>
+              <h4>Biome <code>lint + format</code></h4>
+              <p>One fast tool replaces a separate linter and formatter, so every file in the repo reads the same way
+                regardless of who wrote it.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">03</span>
+            <div>
+              <h4>Husky + lint-staged <code>pre-commit</code></h4>
+              <p>Checks run on the files you're actually committing, before they land — problems get caught locally, not
+                in review.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">04</span>
+            <div>
+              <h4>commitlint <code>conventional commits</code></h4>
+              <p>Enforced commit structure means changelogs and version bumps can be generated from history instead of
+                written by hand.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">05</span>
+            <div>
+              <h4>Architecture checks <code>dependency-cruiser</code></h4>
+              <p>Rules stop a route from reaching into another feature's internals, so the modular structure stays
+                modular as the codebase grows.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">06</span>
+            <div>
+              <h4>Tests <code>unit + integration</code></h4>
+              <p>Auth logic — hashing, token rotation, session expiry — is the last place you want a regression to ship
+                unnoticed.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">07</span>
+            <div>
+              <h4>CI <code>on every push</code></h4>
+              <p>Lint, typecheck and test all run before a branch can merge — the same gate for every contributor, every
+                time.</p>
+            </div>
+          </div>
+          <div class="chain-item">
+            <span class="idx">08</span>
+            <div>
+              <h4>Docker <code>reproducible builds</code></h4>
+              <p>What runs in CI is what runs in production — no "works on my machine" gap between environments.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule">
+
+    <!-- STACK -->
+    <section id="stack">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">// core stack</div>
+          <h2>Built on tools your team already trusts</h2>
+        </div>
+        <div class="stack-grid">
+          <div class="stack-card">
+            <span class="tag">runtime</span>
+            <h4>Elysia</h4>
+            <p>A fast, type-safe framework on Bun — end-to-end type inference from route to response.</p>
+          </div>
+          <div class="stack-card">
+            <span class="tag">data layer</span>
+            <h4>Drizzle ORM</h4>
+            <p>SQL-first, fully typed queries with migrations that stay readable as the schema grows.</p>
+          </div>
+          <div class="stack-card">
+            <span class="tag">database</span>
+            <h4>PostgreSQL</h4>
+            <p>Battle-tested relational storage — the same database your team already knows how to operate.</p>
+          </div>
+          <div class="stack-card">
+            <span class="tag">language</span>
+            <h4>TypeScript</h4>
+            <p>Strict types across the entire request lifecycle, from incoming payload to issued session.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section id="get-started">
+      <div class="wrap">
+        <div class="cta">
+          <h2>Own your authentication layer, not just rent it.</h2>
+          <p>Deploy cloak-shield inside your own infrastructure in an afternoon. No vendor lock-in, no per-user pricing
+            — just the auth service your product should have shipped with.</p>
+          <div class="cta-row">
+            <span class="cta-install">bun add cloak-shield</span>
+            <a class="btn btn-solid" href="#top">Read the docs</a>
+            <a class="btn btn-ghost" href="#top">Talk to us</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-row">
+        <a class="brand" href="#top">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+            <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" stroke="url(#g2)" stroke-width="1.6"
+              stroke-linejoin="round" />
+            <defs>
+              <linearGradient id="g2" x1="4" y1="2" x2="20" y2="22">
+                <stop stop-color="#4DE8C8" />
+                <stop offset="1" stop-color="#8C7EFF" />
+              </linearGradient>
+            </defs>
+          </svg>
+          cloak-shield
+        </a>
+        <div class="footer-links">
+          <a href="#about">About</a>
+          <a href="#features">Features</a>
+          <a href="#quality">Engineering</a>
+          <a href="#stack">Stack</a>
+        </div>
+      </div>
+      <div class="footer-note">Lightweight, scalable authentication — Elysia · Drizzle ORM · PostgreSQL · TypeScript.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // one orchestrated hero moment: scramble-decrypt a closing glyph
+    (function () {
+      var el = document.getElementById('scramble');
+      if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { if (el) el.textContent = ''; return; }
+      var glyphs = '#%&$*01{}[]/\\';
+      var frames = 14, i = 0;
+      var timer = setInterval(function () {
+        if (i >= frames) { clearInterval(timer); el.textContent = ''; return; }
+        el.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+        i++;
+      }, 70);
+    })();
+  </script>
+
+</body>
+
+</html>

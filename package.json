@@ -1,0 +1,54 @@
+{
+	"name": "cloak-shield",
+	"private": true,
+	"description": "A lightweight, scalable authentication service featuring Elysia, Drizzle ORM, PostgreSQL, and TypeScript",
+	"type": "module",
+	"scripts": {
+		"arch": "depcruise src --config .dependency-cruiser.cjs",
+		"build:check": "bun build src/index.ts --outdir dist --target bun",
+		"check": "bun run verify",
+		"deps:upgrade": "ncu -i",
+		"dev": "bun --watch src/app/server.ts",
+		"format": "biome format --write .",
+		"knip": "bunx --bun knip",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"prepare": "husky || true",
+		"secrets": "secretlint \"**/*\"",
+		"spell": "cspell --no-progress \"src/**/*.ts\" \"tests/**/*.ts\" \"*.md\"",
+		"start": "bun src/app/server.ts",
+		"test": "bun test",
+		"test:coverage": "bun test --coverage",
+		"type-coverage": "type-coverage --strict --at-least 100 --ignore-catch",
+		"typecheck": "tsc --noEmit",
+		"verify": "bun run typecheck && bun run lint:fix && bun run type-coverage && bun run knip && bun run spell && bun run test"
+	},
+	"dependencies": {
+		"@elysiajs/cors": "^1.4.2",
+		"@elysiajs/openapi": "^1.4.16",
+		"elysia": "^1.4.30",
+		"jose": "^6.2.12",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.14",
+		"@commitlint/cli": "^21.2.3",
+		"@commitlint/config-conventional": "^21.2.3",
+		"@faker-js/faker": "^10.6.0",
+		"@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
+		"@types/bun": "^1.4.2",
+		"cspell": "^10.3.4",
+		"dependency-cruiser": "^18.4.0",
+		"husky": "^9.1.7",
+		"knip": "^6.38.0",
+		"lint-staged": "^17.5.1",
+		"npm-check-updates": "^23.1.0",
+		"secretlint": "^13.0.5",
+		"sort-package-json": "^4.0.0",
+		"type-coverage": "^2.30.1",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"bun": ">=1.2.0"
+	}
+}

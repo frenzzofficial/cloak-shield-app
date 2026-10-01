@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>cloak-shield — API Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0A0D1A;
+      --panel: #121629;
+      --panel-2: #161B34;
+      --line: #242A47;
+      --teal: #4DE8C8;
+      --violet: #8C7EFF;
+      --text: #E7E9F5;
+      --muted: #8087AD;
+      --muted-2: #5C6288;
+      --get: #4DE8C8;
+      --post: #8C7EFF;
+      --lock: #FFB86B;
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-padding-top: 64px;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code,
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    @media (max-width:560px) {
+      .wrap {
+        padding: 0 18px;
+      }
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding-top: env(safe-area-inset-top, 0px);
+      background: rgba(10, 13, 26, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 16.5px;
+    }
+
+    .brand svg {
+      width: 19px;
+      height: 19px;
+      flex: none;
+    }
+
+    .brand .tag {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 13.5px;
+      margin-left: 2px;
+    }
+
+    .navlinks {
+      display: flex;
+      gap: 26px;
+    }
+
+    .navlinks a {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .navlinks a:hover {
+      color: var(--text);
+    }
+
+    @media (max-width:620px) {
+      .navlinks {
+        display: none;
+      }
+    }
+
+    .hero {
+      padding: 52px 0 28px;
+    }
+
+    .hero h1 {
+      font-size: clamp(26px, 4vw, 34px);
+    }
+
+    .hero p {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 15.5px;
+      max-width: 56ch;
+    }
+
+    .search {
+      margin-top: 26px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 11px 14px;
+    }
+
+    .search svg {
+      stroke: var(--muted-2);
+      flex: none;
+    }
+
+    .search input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 14.5px;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+    }
+
+    .search input::placeholder {
+      color: var(--muted-2);
+    }
+
+    .search kbd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--muted-2);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 2px 6px;
+    }
+
+    .group {
+      padding: 36px 0;
+    }
+
+    .group+.group {
+      border-top: 1px solid var(--line);
+    }
+
+    .group-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .group-head h2 {
+      font-size: 16.5px;
+    }
+
+    .group-head .count {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted-2);
+      font-size: 12.5px;
+    }
+
+    .route {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .route-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .route-row:hover {
+      background: var(--panel-2);
+    }
+
+    .method {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 5px;
+      flex: none;
+      width: 44px;
+      text-align: center;
+    }
+
+    .method.get {
+      color: var(--get);
+      background: rgba(77, 232, 200, 0.1);
+      border: 1px solid rgba(77, 232, 200, 0.28);
+    }
+
+    .method.post {
+      color: var(--post);
+      background: rgba(140, 126, 255, 0.1);
+      border: 1px solid rgba(140, 126, 255, 0.3);
+    }
+
+    .route-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.8px;
+      flex: none;
+    }
+
+    .route-desc {
+      color: var(--muted);
+      font-size: 13.6px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .lock {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--lock);
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .lock svg {
+      width: 12px;
+      height: 12px;
+      stroke: var(--lock);
+    }
+
+    .chev {
+      flex: none;
+      stroke: var(--muted-2);
+      transition: transform .15s ease;
+    }
+
+    .route[data-open="true"] .chev {
+      transform: rotate(90deg);
+    }
+
+    @media (max-width:640px) {
+      .route-desc {
+        display: none;
+      }
+    }
+
+    .route-detail {
+      display: none;
+      border-top: 1px solid var(--line);
+      padding: 16px 16px 18px;
+    }
+
+    .route[data-open="true"] .route-detail {
+      display: block;
+    }
+
+    .detail-desc {
+      color: var(--muted);
+      font-size: 13.6px;
+      margin-bottom: 14px;
+    }
+
+    .curl-box {
+      position: relative;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 44px 14px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.6px;
+      color: #C7CBE6;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .copy-btn:hover {
+      color: var(--text);
+      border-color: var(--muted-2);
+    }
+
+    .copy-btn svg {
+      width: 11px;
+      height: 11px;
+    }
+
+    .empty {
+      display: none;
+      color: var(--muted-2);
+      font-size: 13.5px;
+      padding: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .empty.show {
+      display: block;
+    }
+
+    .more-note {
+      margin-top: 6px;
+      padding: 16px 16px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      color: var(--muted-2);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 32px 0;
+      color: var(--muted-2);
+      font-size: 12.5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="wrap">
+      <nav>
+        <a class="brand" href="/">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z" stroke="url(#g1)" stroke-width="1.6"
+              stroke-linejoin="round" />
+            <defs>
+              <linearGradient id="g1" x1="4" y1="2" x2="20" y2="22">
+                <stop stop-color="#4DE8C8" />
+                <stop offset="1" stop-color="#8C7EFF" />
+              </linearGradient>
+            </defs>
+          </svg>
+          cloak-shield <span class="tag">/ API reference</span>
+        </a>
+        <div class="navlinks">
+          <a href="#public">Public</a>
+          <a href="#email-auth">Email auth</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="wrap">
+      <div class="hero">
+        <h1>Routes, ready to test</h1>
+        <p>Every endpoint the service exposes today, grouped by area. Open a route for its request shape and a
+          ready-to-run curl command.</p>
+        <div class="search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input id="filter" type="text" placeholder="Filter routes — try &quot;auth&quot; or &quot;health&quot;"
+            autocomplete="off">
+          <kbd>/</kbd>
+        </div>
+      </div>
+
+      <div class="group" id="public">
+        <div class="group-head">
+          <h2>Public endpoints</h2><span class="count">7 routes</span>
+        </div>
+        <div class="routes"></div>
+        <div class="empty">No routes match.</div>
+      </div>
+
+      <div class="group" id="email-auth">
+        <div class="group-head">
+          <h2>Email authentication</h2><span class="count">8 routes</span>
+        </div>
+        <div class="routes"></div>
+        <div class="empty">No routes match.</div>
+        <div class="more-note">// more route groups (phone auth, OAuth, sessions…) land here as they ship</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">Base URL <code class="mono">https://api.your-domain.com</code> · replace with your deployment
+      before running any request.</div>
+  </footer>
+
+  <script>
+    const DATA = {
+      "public": [
+        {
+          m: "GET", path: "/", desc: "Application homepage", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/"
+        },
+        {
+          m: "GET", path: "/about", desc: "Project information", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/about"
+        },
+        {
+          m: "GET", path: "/documentation", desc: "Interactive Swagger UI", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/documentation"
+        },
+        {
+          m: "GET", path: "/openapi", desc: "OpenAPI JSON specification", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/openapi"
+        },
+        {
+          m: "GET", path: "/health", desc: "Health monitoring endpoint", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/health"
+        },
+        {
+          m: "GET", path: "/app/health", desc: "API health endpoint", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/app/health"
+        },
+        {
+          m: "GET", path: "/assets/{path}", desc: "Static assets (CSS, JS, fonts, images)", auth: false,
+          curl: "curl -X GET https://api.your-domain.com/assets/logo.svg"
+        },
+      ],
+      "email-auth": [
+        {
+          m: "POST", path: "/auth/email/signup", desc: "Create a new account", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/signup \\\n  -H "Content-Type: application/json" \\\n  -d \'{"email":"dev@company.com","password":"••••••••"}\''
+        },
+        {
+          m: "POST", path: "/auth/email/signin", desc: "Authenticate user", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/signin \\\n  -H "Content-Type: application/json" \\\n  -d \'{"email":"dev@company.com","password":"••••••••"}\''
+        },
+        {
+          m: "POST", path: "/auth/email/signout", desc: "End the current session", auth: true,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/signout \\\n  -H "Cookie: cs_session=<token>"'
+        },
+        {
+          m: "POST", path: "/auth/email/refresh", desc: "Refresh access token", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/refresh \\\n  -H "Cookie: cs_refresh=<refresh_token>"'
+        },
+        {
+          m: "GET", path: "/auth/email/me", desc: "Current authenticated user", auth: true,
+          curl: 'curl -X GET https://api.your-domain.com/auth/email/me \\\n  -H "Cookie: cs_session=<token>"'
+        },
+        {
+          m: "POST", path: "/auth/email/verify-email", desc: "Verify email address", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/verify-email \\\n  -H "Content-Type: application/json" \\\n  -d \'{"token":"<verification_token>"}\''
+        },
+        {
+          m: "POST", path: "/auth/email/forgot-password", desc: "Password recovery", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/forgot-password \\\n  -H "Content-Type: application/json" \\\n  -d \'{"email":"dev@company.com"}\''
+        },
+        {
+          m: "POST", path: "/auth/email/reset-password", desc: "Reset account password", auth: false,
+          curl: 'curl -X POST https://api.your-domain.com/auth/email/reset-password \\\n  -H "Content-Type: application/json" \\\n  -d \'{"token":"<reset_token>","password":"••••••••"}\''
+        },
+      ]
+    };
+
+    function lockIcon() {
+      return '<span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>auth</span>';
+    }
+
+    function render() {
+      Object.keys(DATA).forEach(function (groupId) {
+        var container = document.querySelector('#' + groupId + ' .routes');
+        container.innerHTML = DATA[groupId].map(function (r, i) {
+          var id = groupId + '-' + i;
+          return (
+            '<div class="route" data-open="false" data-search="' + (r.m + ' ' + r.path + ' ' + r.desc).toLowerCase() + '">' +
+            '<button class="route-row" data-target="' + id + '">' +
+            '<span class="method ' + r.m.toLowerCase() + '">' + r.m + '</span>' +
+            '<span class="route-path">' + r.path + '</span>' +
+            '<span class="route-desc">' + r.desc + '</span>' +
+            (r.auth ? lockIcon() : '') +
+            '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>' +
+            '</button>' +
+            '<div class="route-detail" id="' + id + '">' +
+            '<div class="detail-desc">' + r.desc + (r.auth ? ' — requires an active session cookie.' : '') + '</div>' +
+            '<div class="curl-box">' + escapeHtml(r.curl) +
+            '<button class="copy-btn" data-curl-idx="' + id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="1.5"/><rect x="4" y="4" width="11" height="11" rx="1.5"/></svg>Copy</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>'
+          );
+        }).join('');
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; });
+    }
+
+    document.addEventListener('click', function (e) {
+      var row = e.target.closest('.route-row');
+      if (row) {
+        var route = row.closest('.route');
+        route.dataset.open = route.dataset.open === 'true' ? 'false' : 'true';
+        return;
+      }
+      var copyBtn = e.target.closest('.copy-btn');
+      if (copyBtn) {
+        var box = copyBtn.closest('.curl-box');
+        var text = box.textContent.replace('Copy', '').trim();
+        navigator.clipboard && navigator.clipboard.writeText(text).catch(function () { });
+        var original = copyBtn.innerHTML;
+        copyBtn.textContent = 'Copied';
+        setTimeout(function () { copyBtn.innerHTML = original; }, 1400);
+      }
+    });
+
+    var filterInput = document.getElementById('filter');
+    filterInput.addEventListener('input', function () {
+      var q = filterInput.value.trim().toLowerCase();
+      document.querySelectorAll('.group').forEach(function (group) {
+        var routes = group.querySelectorAll('.route');
+        var visible = 0;
+        routes.forEach(function (r) {
+          var match = r.dataset.search.indexOf(q) !== -1;
+          r.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        group.querySelector('.empty').classList.toggle('show', visible === 0 && routes.length > 0);
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === '/' && document.activeElement !== filterInput) {
+        e.preventDefault();
+        filterInput.focus();
+      }
+    });
+
+    render();
+  </script>
+</body>
+
+</html>
