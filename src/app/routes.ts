@@ -1,6 +1,7 @@
 import type { Elysia } from "elysia";
 
 import { registerOpenApi } from "../packages/middlewares/openapi";
+import { registerEmailAuthRoutes } from "./auth/email/email.routes";
 import { registerHealthRoutes } from "./health/health.routes";
 import { registerApiRoutes } from "./register-api-routes";
 import { registerStaticRoutes } from "./static/static.routes";
@@ -25,4 +26,6 @@ export const registerBootstrap = (app: Elysia): void => {
 
 	// ── Versioned API routes ──────────────────────────────────────────────────────────────
 	registerApiRoutes(app);
+
+	registerEmailAuthRoutes(app);
 };
