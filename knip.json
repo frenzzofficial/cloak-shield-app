@@ -2,10 +2,14 @@
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"entry": ["src/index.ts", "tests/**/*.test.ts"],
 	"project": ["src/**/*.ts", "tests/**/*.ts"],
-	"ignoreDependencies": [
-		"@secretlint/secretlint-rule-preset-recommend",
-		"jose",
-		"@faker-js/faker"
-	],
-	"rules": { "types": "off" }
+	"ignoreDependencies": ["@secretlint/secretlint-rule-preset-recommend", "@faker-js/faker"],
+	"rules": {
+		"types": "off"
+	},
+	"drizzle": false,
+	"ignore": ["src/packages/schema/common.schema.ts"],
+	"ignoreIssues": {
+		"src/packages/configs/**": ["exports", "types"],
+		"src/packages/schema/**": ["exports", "types"]
+	}
 }

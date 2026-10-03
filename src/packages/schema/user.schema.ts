@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { UserGenderValues } from "../configs/gender.config";
-import { UserRolesValues, userStatusValues } from "../configs/roles.config";
+import type { AuthTokenType } from "@/packages/configs/auth-token.config";
+import { UserGenderValues } from "@/packages/configs/gender.config";
+import { UserRolesValues, userStatusValues } from "@/packages/configs/roles.config";
 import {
 	confirmPasswordRules,
 	emailRules,
@@ -9,11 +10,12 @@ import {
 	phoneRules,
 	schemaMessages,
 	usernameRules,
-} from "../configs/schemas.config.js";
+} from "@/packages/configs/schemas.config";
 
 export const userSchema = z.object({
 	id: z.uuid(),
-	fullname: fullnameRules,
+	// Optional at sign-up, so "no name yet" is null rather than an empty string.
+	fullname: fullnameRules.nullable(),
 	email: emailRules,
 	avatarUrl: z.url().nullable(),
 	role: z.enum(UserRolesValues),
@@ -66,12 +68,26 @@ export const userSessionSchema = z.object({
 	os: z.string(),
 	ipAddress: z.string(),
 	userAgent: z.string(),
+	refreshTokenId: z.string(),
+	previousRefreshTokenId: z.string().nullable(),
+	refreshRotatedAt: z.coerce.date().nullable(),
 	lastSeenAt: z.coerce.date(),
 	expiresAt: z.coerce.date(),
 	createdAt: z.coerce.date(),
 });
 
 export type UserSession = z.infer<typeof userSessionSchema>;
+
+/** Single-use email-verification / password-reset token (hash only, never the raw token). */
+export interface AuthTokenRecord {
+	id: string;
+	userId: string;
+	type: AuthTokenType;
+	tokenHash: string;
+	expiresAt: Date;
+	usedAt: Date | null;
+	createdAt: Date;
+}
 
 export const userPreferencesSchema = z.object({
 	userId: z.uuid(),

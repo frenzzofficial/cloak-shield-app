@@ -1,6 +1,8 @@
 import type { Elysia } from "elysia";
 
-import { appConfig } from "../packages/configs/app.config";
+import { appConfig } from "@/packages/configs/app.config";
+import { envAppConfig } from "@/packages/env/app.env";
+import { CSRF_COOKIE_NAME } from "@/packages/middlewares/csrf";
 
 // Every versioned route is registered under a single `.group()`, e.g. /api/v1/... .
 // Root-level routes that shouldn't be versioned (/, /health) stay outside this group —
@@ -32,4 +34,23 @@ export const registerApiRoutes = (app: Elysia): void => {
 			},
 		),
 	);
+
+	// A frontend on another origin cannot read this API's cookies, so it fetches the CSRF token
+	// here (cross-origin reads are protected by the CORS allowlist) and echoes it back in the
+	// `x-csrf-token` header on every state-changing request.
+	if (envAppConfig.ENABLE_CSRF_PROTECTION) {
+		app.get(
+			appConfig.auth.csrfToken,
+			({ cookie, status }) =>
+				status(200, { success: true, csrfToken: cookie[CSRF_COOKIE_NAME]?.value }),
+			{
+				detail: {
+					tags: ["Auth"],
+					summary: "CSRF token",
+					description:
+						"Returns the CSRF token to send as x-csrf-token on POST/PUT/PATCH/DELETE requests.",
+				},
+			},
+		);
+	}
 };

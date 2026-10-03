@@ -1,23 +1,22 @@
+import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
+import { envAuthConfig } from "@/packages/env/auth.env";
 import { AppError } from "./errors";
 
-// ── Config ───────────────────────────────────────────────────────────────────
+// ── Config ─────────────────────────────────────────────────────────────────────
 
-const ACCESS_TOKEN_SECRET = process.env.AUTH_ACCESS_TOKEN_SECRET ?? "";
-const REFRESH_TOKEN_SECRET = process.env.AUTH_REFRESH_TOKEN_SECRET ?? "";
+const ISSUER = "cloak-shield";
+const AUDIENCE = "cloak-shield-api";
+const ALGORITHM = "HS256";
 
-const ACCESS_TOKEN_TTL = process.env.AUTH_ACCESS_TOKEN_TTL ?? "15m";
-const REFRESH_TOKEN_TTL = process.env.AUTH_REFRESH_TOKEN_TTL ?? "30d";
+const encoder = new TextEncoder();
+const accessKey = encoder.encode(envAuthConfig.AUTH_ACCESS_TOKEN_SECRET);
+const refreshKey = encoder.encode(envAuthConfig.AUTH_REFRESH_TOKEN_SECRET);
 
-const getSecretKey = (secret: string, name: string): Uint8Array => {
-	if (!secret) {
-		throw new Error(`Missing ${name} environment variable.`);
-	}
-	return new TextEncoder().encode(secret);
-};
+const nowSeconds = (): number => Math.floor(Date.now() / 1_000);
 
-// ── Token payloads ───────────────────────────────────────────────────────────
+// ── Token payloads ─────────────────────────────────────────────────────────────
 
 export interface AccessTokenPayload {
 	userId: string;
@@ -29,45 +28,56 @@ export interface AccessTokenPayload {
 export interface RefreshTokenPayload {
 	userId: string;
 	sessionId: string;
+	/** Rotation id (JWT `jti`). Only the newest one per session is accepted. */
+	tokenId: string;
 }
 
-// ── Sign ─────────────────────────────────────────────────────────────────────
+// ── Sign ───────────────────────────────────────────────────────────────────────
 
-export const signAccessToken = async (payload: AccessTokenPayload): Promise<string> => {
-	const key = getSecretKey(ACCESS_TOKEN_SECRET, "AUTH_ACCESS_TOKEN_SECRET");
-
-	return new SignJWT({
-		email: payload.email,
-		role: payload.role,
-		sid: payload.sessionId,
-	})
-		.setProtectedHeader({ alg: "HS256" })
+export const signAccessToken = async (
+	payload: AccessTokenPayload,
+	ttlSeconds: number = envAuthConfig.AUTH_ACCESS_TOKEN_TTL,
+): Promise<string> =>
+	new SignJWT({ email: payload.email, role: payload.role, sid: payload.sessionId, typ: "access" })
+		.setProtectedHeader({ alg: ALGORITHM })
+		.setIssuer(ISSUER)
+		.setAudience(AUDIENCE)
 		.setSubject(payload.userId)
 		.setIssuedAt()
-		.setExpirationTime(ACCESS_TOKEN_TTL)
-		.sign(key);
-};
+		.setExpirationTime(nowSeconds() + ttlSeconds)
+		.sign(accessKey);
 
-export const signRefreshToken = async (payload: RefreshTokenPayload): Promise<string> => {
-	const key = getSecretKey(REFRESH_TOKEN_SECRET, "AUTH_REFRESH_TOKEN_SECRET");
-
-	return new SignJWT({ sid: payload.sessionId })
-		.setProtectedHeader({ alg: "HS256" })
+/** The refresh token expires exactly when its session does (`expiresAt`), never later. */
+export const signRefreshToken = async (
+	payload: RefreshTokenPayload,
+	expiresAt: Date,
+): Promise<string> =>
+	new SignJWT({ sid: payload.sessionId, typ: "refresh" })
+		.setProtectedHeader({ alg: ALGORITHM })
+		.setIssuer(ISSUER)
+		.setAudience(AUDIENCE)
 		.setSubject(payload.userId)
+		.setJti(payload.tokenId)
 		.setIssuedAt()
-		.setExpirationTime(REFRESH_TOKEN_TTL)
-		.sign(key);
-};
+		.setExpirationTime(Math.floor(expiresAt.getTime() / 1_000))
+		.sign(refreshKey);
 
-// ── Verify ───────────────────────────────────────────────────────────────────
+// ── Verify ─────────────────────────────────────────────────────────────────────
 
 export const verifyAccessToken = async (token: string): Promise<AccessTokenPayload> => {
-	const key = getSecretKey(ACCESS_TOKEN_SECRET, "AUTH_ACCESS_TOKEN_SECRET");
-
 	try {
-		const { payload } = await jwtVerify(token, key);
+		const { payload } = await jwtVerify(token, accessKey, {
+			algorithms: [ALGORITHM],
+			issuer: ISSUER,
+			audience: AUDIENCE,
+		});
 
-		if (!payload.sub || typeof payload.email !== "string" || typeof payload.sid !== "string") {
+		if (
+			payload.typ !== "access" ||
+			!payload.sub ||
+			typeof payload.email !== "string" ||
+			typeof payload.sid !== "string"
+		) {
 			throw AppError.unauthorized("Malformed access token");
 		}
 
@@ -84,31 +94,52 @@ export const verifyAccessToken = async (token: string): Promise<AccessTokenPaylo
 };
 
 export const verifyRefreshToken = async (token: string): Promise<RefreshTokenPayload> => {
-	const key = getSecretKey(REFRESH_TOKEN_SECRET, "AUTH_REFRESH_TOKEN_SECRET");
-
 	try {
-		const { payload } = await jwtVerify(token, key);
+		const { payload } = await jwtVerify(token, refreshKey, {
+			algorithms: [ALGORITHM],
+			issuer: ISSUER,
+			audience: AUDIENCE,
+		});
 
-		if (!payload.sub || typeof payload.sid !== "string") {
+		if (
+			payload.typ !== "refresh" ||
+			!payload.sub ||
+			!payload.jti ||
+			typeof payload.sid !== "string"
+		) {
 			throw AppError.unauthorized("Malformed refresh token");
 		}
 
-		return {
-			userId: payload.sub,
-			sessionId: payload.sid,
-		};
+		return { userId: payload.sub, sessionId: payload.sid, tokenId: payload.jti };
 	} catch (error) {
 		if (error instanceof AppError) throw error;
 		throw AppError.unauthorized("Invalid or expired refresh token");
 	}
 };
 
-// ── Passwords ────────────────────────────────────────────────────────────────
-// Uses Bun's built-in password hashing (argon2id) — no extra dependency, and
-// this project is deployed on the Bun runtime (see vercel.json).
+// ── Passwords ──────────────────────────────────────────────────────────────────
+// Bun's built-in argon2id: no extra dependency, and this project runs on Bun (vercel.json).
 
 export const hashPassword = (password: string): Promise<string> =>
 	Bun.password.hash(password, { algorithm: "argon2id" });
 
 export const verifyPassword = (password: string, hash: string): Promise<boolean> =>
 	Bun.password.verify(password, hash);
+
+let dummyHash: Promise<string> | undefined;
+
+/**
+ * Burns the same argon2 time as a real check. Sign-in calls this for unknown emails so the
+ * response time does not reveal whether an account exists.
+ */
+export const verifyAgainstDummyHash = async (password: string): Promise<void> => {
+	dummyHash ??= hashPassword(randomBytes(16).toString("hex"));
+	await verifyPassword(password, await dummyHash);
+};
+
+// ── One-time tokens (email verification, password reset) ──────────────────────
+
+export const generateOpaqueToken = (): string => randomBytes(32).toString("base64url");
+
+export const hashOpaqueToken = (token: string): string =>
+	createHash("sha256").update(token).digest("hex");

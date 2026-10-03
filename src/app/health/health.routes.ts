@@ -1,8 +1,8 @@
 import type Elysia from "elysia";
 import type { Context } from "elysia";
-import { appConfig } from "../../packages/configs/app.config";
-import type { HealthResponse } from "../../packages/schema/health.schema";
-import { ok } from "../../packages/utils/response";
+import { appConfig } from "@/packages/configs/app.config";
+import type { HealthResponse } from "@/packages/schema/health.schema";
+import { ok } from "@/packages/utils/response";
 import { getHealthStatus } from "./health.service";
 
 const handleHealthCheck = async (c: Context) => {

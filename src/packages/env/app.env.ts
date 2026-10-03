@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseEnv } from "../utils/parse-env";
+import { parseEnv } from "@/packages/utils/parse-env";
 
 // Development-only fallback. Production must provide its own value (see superRefine below).
 const DEV_APP_SECRET = "abcdefghijklmnopqrstuvwxyz1234567890";
@@ -37,12 +37,27 @@ const serverEnvSchema = z
 		ENABLE_SWAGGER: z.stringbool().default(true),
 
 		ENABLE_CORS_PROTECTION: z.stringbool().default(false),
-		ENABLE_CSRF_PROTECTION: z.stringbool().default(false),
+		// Auth uses cookies, so CSRF protection is on unless explicitly disabled.
+		ENABLE_CSRF_PROTECTION: z.stringbool().default(true),
+
+		// Which proxy header carries the real client IP. Trusting the wrong one lets a client
+		// forge its IP and walk around rate limits, so the default is "none" (socket address)
+		// everywhere except Vercel, where the platform overwrites the forwarding headers.
+		//   none       - ignore all forwarding headers
+		//   vercel     - x-vercel-forwarded-for / x-real-ip / x-forwarded-for
+		//   cloudflare - cf-connecting-ip
+		//   forwarded  - rightmost x-forwarded-for entry (exactly one trusted proxy in front)
+		TRUST_PROXY: z
+			.enum(["none", "vercel", "cloudflare", "forwarded"])
+			.default(process.env.VERCEL ? "vercel" : "none"),
+
+		// Supabase and most hosted Postgres require TLS. Set false for a local Postgres.
+		DATABASE_SSL: z.stringbool().default(true),
 
 		ENABLE_REDIS: z.stringbool().default(false),
 		ENABLE_SMTP: z.stringbool().default(false),
 
-		ENABLE_EMAIL_AUTH: z.stringbool().default(false),
+		ENABLE_EMAIL_AUTH: z.stringbool().default(true),
 		ENABLE_PHONE_AUTH: z.stringbool().default(false),
 	})
 	.superRefine((env, ctx) => {

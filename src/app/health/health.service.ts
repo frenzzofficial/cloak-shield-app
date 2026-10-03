@@ -3,9 +3,9 @@
 // (local Map, MySQL, or Postgres) instead of just returning static "I'm up"
 // data that says nothing about whether the database is reachable.
 
-import { appConfig } from "../../packages/configs/app.config";
-import type { HealthResponse } from "../../packages/schema/health.schema";
-import { logger } from "../../packages/utils/logger";
+import { appConfig } from "@/packages/configs/app.config";
+import type { HealthResponse } from "@/packages/schema/health.schema";
+import { logger } from "@/packages/utils/logger";
 
 export const getHealthStatus = async (): Promise<HealthResponse> => {
 	let database: "ok" | "unreachable" = "ok";

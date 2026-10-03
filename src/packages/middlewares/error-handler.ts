@@ -1,10 +1,33 @@
 import type { Elysia } from "elysia";
-import { AppError } from "../utils/errors";
-import { logger } from "../utils/logger";
+import { isUniqueViolation } from "@/packages/utils/db-errors";
+import { AppError } from "@/packages/utils/errors";
+import { logger } from "@/packages/utils/logger";
 
-type ErrorBody = { success: false; message: string };
+interface FieldError {
+	field: string;
+	message: string;
+}
 
-const body = (message: string): ErrorBody => ({ success: false, message });
+type ErrorBody = { success: false; message: string; errors?: FieldError[] };
+
+const body = (message: string, errors?: FieldError[]): ErrorBody =>
+	errors && errors.length > 0 ? { success: false, message, errors } : { success: false, message };
+
+// Elysia reports every failed rule; a password that is too short AND missing a digit appears
+// twice. One message per field is what a form needs, so keep the first for each path.
+const toFieldErrors = (issues: ReadonlyArray<{ path: string; message: string }>): FieldError[] => {
+	const seen = new Set<string>();
+	const result: FieldError[] = [];
+
+	for (const issue of issues) {
+		const field = issue.path.replace(/^\//, "").replaceAll("/", ".") || "body";
+		if (seen.has(field)) continue;
+		seen.add(field);
+		result.push({ field, message: issue.message });
+	}
+
+	return result;
+};
 
 // Single place for all error handling. AppError is the only error type
 // thrown from services (see errors.ts) — anything else is a programming
@@ -36,9 +59,16 @@ export const registerErrorHandler = (app: Elysia): void => {
 			// Elysia's own `body: zodSchema` validation surfaces here.
 			case "VALIDATION":
 				set.status = 422;
-				return body("Validation failed");
+				return body("Validation failed", toFieldErrors(error.all));
 			default:
 				break;
+		}
+
+		// A unique constraint that slipped past a pre-check (two requests racing) is a
+		// conflict, not a server fault.
+		if (isUniqueViolation(error)) {
+			set.status = 409;
+			return body("Resource already exists");
 		}
 
 		logger.error("unhandled error", {

@@ -1,6 +1,6 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "../env/app.env";
+import { envAppConfig } from "@/packages/env/app.env";
 
 // Gzip-compresses JSON responses when the client sends `Accept-Encoding: gzip`.
 //

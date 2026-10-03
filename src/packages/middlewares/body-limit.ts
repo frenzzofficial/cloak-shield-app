@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "../env/app.env";
-import { AppError } from "../utils/errors";
+import { envAppConfig } from "@/packages/env/app.env";
+import { AppError } from "@/packages/utils/errors";
 
 // Elysia parses JSON/text/form/multipart bodies automatically based on Content-Type — there's
 // no separate "body parser" to install. What's missing is a size limit: without one, a client

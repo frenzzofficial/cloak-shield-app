@@ -38,7 +38,7 @@ export const schemaMessages = {
 
 	// FULL NAME
 	fullnameRequired: "Full name is required",
-	fullnameTooShort: "Full name must be at least 5 characters",
+	fullnameTooShort: "Full name must be at least 2 characters",
 	fullnameTooLong: "Full name must not exceed 100 characters",
 	fullnameInvalid: "Full name contains invalid characters",
 
@@ -50,7 +50,7 @@ export const schemaMessages = {
 	// PASSWORD
 	passwordRequired: "Password is required",
 	passwordTooShort: "Password must be at least 8 characters long",
-	passwordTooLong: "Password must not exceed 32 characters",
+	passwordTooLong: "Password must not exceed 128 characters",
 	passwordUpper: "Password must contain at least one uppercase letter",
 	passwordLower: "Password must contain at least one lowercase letter",
 	passwordNumber: "Password must contain at least one number",
@@ -149,10 +149,12 @@ const calculateAge = (birthdate: Date): number => {
 // ============================================================
 
 // FULL NAME rules
+// Letters and combining marks from any script, plus spaces, apostrophes, dots and hyphens,
+// so "Ánna Müller", "李小龙" and "Nguyễn Văn A" all pass.
 export const fullnameRules = trimString()
-	.min(5, schemaMessages.fullnameTooShort)
+	.min(2, schemaMessages.fullnameTooShort)
 	.max(100, schemaMessages.fullnameTooLong)
-	.regex(/^[A-Za-z\s'-]+$/, schemaMessages.fullnameInvalid)
+	.regex(/^[\p{L}\p{M}\s'’.-]+$/u, schemaMessages.fullnameInvalid)
 	.describe("Full name");
 
 // USERNAME rules
@@ -163,9 +165,12 @@ export const usernameRules = trimString()
 	.describe("Username");
 
 // PASSWORD rules
-export const passwordRules = trimString()
+// Not trimmed: silently changing what the user typed would make the stored password differ
+// from the one they believe they set. Spaces are rejected instead (see passwordNoSpaces).
+export const passwordRules = z
+	.string()
 	.min(8, schemaMessages.passwordTooShort)
-	.max(32, schemaMessages.passwordTooLong)
+	.max(128, schemaMessages.passwordTooLong)
 	.regex(/[A-Z]/, schemaMessages.passwordUpper)
 	.regex(/[a-z]/, schemaMessages.passwordLower)
 	.regex(/[0-9]/, schemaMessages.passwordNumber)
@@ -175,7 +180,16 @@ export const passwordRules = trimString()
 	})
 	.describe("Secure password with uppercase, lowercase, number and special character");
 
-export const confirmPasswordRules = trimString().describe("Confirm password");
+export const confirmPasswordRules = z.string().describe("Confirm password");
+
+// Sign-in only checks that something sensible was sent. Complexity rules belong to sign-up
+// and password changes; applying them here would 422 users whose password predates a policy
+// change instead of giving the normal "invalid email or password" answer.
+export const signInPasswordRules = z
+	.string()
+	.min(1, schemaMessages.passwordRequired)
+	.max(128, schemaMessages.passwordTooLong)
+	.describe("Account password");
 
 /**
  * Wraps an object schema with a password === confirmPassword check.
@@ -215,11 +229,12 @@ export const otpRules = trimString()
  * domains and explicitly blacklisted addresses.
  */
 export const emailRules = z
-	.email(schemaMessages.emailInvalid)
+	.string()
 	.trim()
 	.toLowerCase()
 	.min(1, schemaMessages.emailRequired)
 	.max(255, schemaMessages.emailTooLong)
+	.pipe(z.email(schemaMessages.emailInvalid))
 	.refine((email) => !isDomainBlacklisted(getEmailDomain(email)), {
 		message: schemaMessages.emailDomainBlacklisted,
 	})
@@ -236,11 +251,12 @@ export const emailRules = z
  * for defense in depth.
  */
 export const emailRestrictedRules = z
-	.email(schemaMessages.emailInvalid)
+	.string()
 	.trim()
 	.toLowerCase()
 	.min(1, schemaMessages.emailRequired)
 	.max(255, schemaMessages.emailTooLong)
+	.pipe(z.email(schemaMessages.emailInvalid))
 	.refine((email) => isDomainAllowed(getEmailDomain(email)), {
 		message: schemaMessages.emailDomain,
 	})
@@ -502,6 +518,15 @@ export const booleanQueryRules = z.preprocess((value) => {
 	if (typeof value === "string") return value.toLowerCase() === "true";
 	return value;
 }, z.boolean());
+
+/**
+ * Boolean for JSON bodies and form fields: accepts true/false and the strings "true"/"false"/
+ * "1"/"0"/"yes"/"no". Never use z.coerce.boolean() for this: it turns "false" into true.
+ */
+export const booleanFlagRules = z.union([z.boolean(), z.stringbool()]);
+
+// Opaque single-use token from an email link (verification / password reset).
+export const emailTokenRules = z.string().trim().min(20).max(512);
 
 // TAGS rules — array of short strings, no duplicates
 export const tagsRules = z

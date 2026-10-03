@@ -1,17 +1,26 @@
-import { desc, eq, lt } from "drizzle-orm";
-import type { Repository } from "../../../types/repository";
-import { db } from "../../db/client";
-import { userPreferences, userProfiles, userSecurity, userSessions, users } from "../../db/schema";
+import { and, desc, eq, gt, inArray, isNull, lt, sql } from "drizzle-orm";
+import type { AuthTokenType } from "@/packages/configs/auth-token.config";
+import { db } from "@/packages/db/client";
+import {
+	authTokens,
+	userPreferences,
+	userProfiles,
+	userSecurity,
+	userSessions,
+	users,
+} from "@/packages/db/schema";
 import type {
+	AuthTokenRecord,
 	User,
 	UserPreferences,
 	UserProfile,
 	UserSecurity,
 	UserSession,
-} from "../../schema/user.schema";
-import { AppError } from "../../utils/errors";
+} from "@/packages/schema/user.schema";
+import { AppError } from "@/packages/utils/errors";
+import type { Repository } from "@/types/repository";
 
-export class DrizzleAuthRepository implements Repository {
+class DrizzleAuthRepository implements Repository {
 	// ── Core user ────────────────────────────────────────────────────────────
 
 	async findUserByEmail(email: string): Promise<User | undefined> {
@@ -35,7 +44,7 @@ export class DrizzleAuthRepository implements Repository {
 			.values({
 				id: user.id,
 				fullname: user.fullname,
-				email: user.email,
+				email: user.email.trim().toLowerCase(),
 				avatarUrl: user.avatarUrl,
 				role: user.role,
 				status: user.status,
@@ -52,7 +61,7 @@ export class DrizzleAuthRepository implements Repository {
 			.update(users)
 			.set({
 				fullname: user.fullname,
-				email: user.email,
+				email: user.email.trim().toLowerCase(),
 				avatarUrl: user.avatarUrl,
 				role: user.role,
 				status: user.status,
@@ -133,6 +142,30 @@ export class DrizzleAuthRepository implements Repository {
 
 		if (!row) throw AppError.notFound("updateUserSecurity: record not found");
 		return row as UserSecurity;
+	}
+
+	async registerFailedLogin(
+		userId: string,
+		maxAttempts: number,
+		lockSeconds: number,
+	): Promise<UserSecurity | undefined> {
+		// One UPDATE, so concurrent wrong guesses each increment the same counter instead of all
+		// reading "0" and writing "1". Postgres evaluates every SET expression against the OLD
+		// row, which is why the next-count expression is spelled out twice.
+		const lockExpired = sql`(${userSecurity.lockedUntil} IS NOT NULL AND ${userSecurity.lockedUntil} <= now())`;
+		const nextCount = sql`(CASE WHEN ${lockExpired} THEN 1 ELSE ${userSecurity.failedLoginAttempts} + 1 END)`;
+
+		const [row] = await db
+			.update(userSecurity)
+			.set({
+				failedLoginAttempts: nextCount,
+				lockedUntil: sql`(CASE WHEN ${nextCount} >= ${maxAttempts}::int THEN now() + make_interval(secs => ${lockSeconds}::double precision) ELSE NULL END)`,
+				updatedAt: new Date(),
+			})
+			.where(eq(userSecurity.userId, userId))
+			.returning();
+
+		return row;
 	}
 
 	// ── Profile ──────────────────────────────────────────────────────────────
@@ -242,6 +275,7 @@ export class DrizzleAuthRepository implements Repository {
 				os: session.os,
 				ipAddress: session.ipAddress,
 				userAgent: session.userAgent,
+				refreshTokenId: session.refreshTokenId,
 				lastSeenAt: session.lastSeenAt,
 				expiresAt: session.expiresAt,
 			})
@@ -254,6 +288,71 @@ export class DrizzleAuthRepository implements Repository {
 	async getSession(id: string): Promise<UserSession | undefined> {
 		const [row] = await db.select().from(userSessions).where(eq(userSessions.id, id)).limit(1);
 		return row as UserSession | undefined;
+	}
+
+	async getSessionWithUser(
+		id: string,
+	): Promise<{ session: UserSession; user: User } | undefined> {
+		const [row] = await db
+			.select({ session: userSessions, user: users })
+			.from(userSessions)
+			.innerJoin(users, eq(userSessions.userId, users.id))
+			.where(eq(userSessions.id, id))
+			.limit(1);
+
+		return row;
+	}
+
+	async rotateRefreshToken(
+		sessionId: string,
+		currentTokenId: string,
+		nextTokenId: string,
+	): Promise<UserSession | undefined> {
+		const now = new Date();
+
+		// `refresh_token_id = current` in the WHERE clause is the compare-and-swap: of two
+		// requests presenting the same token, exactly one matches a row.
+		const [row] = await db
+			.update(userSessions)
+			.set({
+				refreshTokenId: nextTokenId,
+				previousRefreshTokenId: currentTokenId,
+				refreshRotatedAt: now,
+				lastSeenAt: now,
+			})
+			.where(
+				and(
+					eq(userSessions.id, sessionId),
+					eq(userSessions.refreshTokenId, currentTokenId),
+				),
+			)
+			.returning();
+
+		return row;
+	}
+
+	async deleteExpiredSessionsForUser(userId: string): Promise<void> {
+		await db
+			.delete(userSessions)
+			.where(and(eq(userSessions.userId, userId), lt(userSessions.expiresAt, new Date())));
+	}
+
+	async trimSessionsForUser(userId: string, keep: number): Promise<void> {
+		const surplus = await db
+			.select({ id: userSessions.id })
+			.from(userSessions)
+			.where(eq(userSessions.userId, userId))
+			.orderBy(desc(userSessions.lastSeenAt), desc(userSessions.createdAt))
+			.offset(keep);
+
+		if (surplus.length === 0) return;
+
+		await db.delete(userSessions).where(
+			inArray(
+				userSessions.id,
+				surplus.map((row) => row.id),
+			),
+		);
 	}
 
 	async revokeSession(id: string): Promise<void> {
@@ -274,6 +373,57 @@ export class DrizzleAuthRepository implements Repository {
 		return rows as UserSession[];
 	}
 
+	// ── One-time email tokens ───────────────────────────────────────────────
+
+	async createAuthToken(token: AuthTokenRecord): Promise<void> {
+		await db.insert(authTokens).values({
+			id: token.id,
+			userId: token.userId,
+			type: token.type,
+			tokenHash: token.tokenHash,
+			expiresAt: token.expiresAt,
+		});
+	}
+
+	async consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<string | undefined> {
+		// Mark-as-used and check-validity in one statement: two requests carrying the same
+		// link cannot both succeed.
+		const [row] = await db
+			.update(authTokens)
+			.set({ usedAt: new Date() })
+			.where(
+				and(
+					eq(authTokens.tokenHash, tokenHash),
+					eq(authTokens.type, type),
+					isNull(authTokens.usedAt),
+					gt(authTokens.expiresAt, new Date()),
+				),
+			)
+			.returning({ userId: authTokens.userId });
+
+		return row?.userId;
+	}
+
+	async deleteAuthTokensForUser(userId: string, type: AuthTokenType): Promise<void> {
+		await db
+			.delete(authTokens)
+			.where(and(eq(authTokens.userId, userId), eq(authTokens.type, type)));
+	}
+
+	async markEmailVerified(userId: string): Promise<User | undefined> {
+		const [row] = await db
+			.update(users)
+			.set({
+				emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())`,
+				status: sql`(CASE WHEN ${users.status} = 'PENDING_VERIFICATION' THEN 'ACTIVE'::user_status ELSE ${users.status} END)`,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, userId))
+			.returning();
+
+		return row;
+	}
+
 	// ── Transactional registration ──────────────────────────────────────────
 	// A real Postgres transaction now (Drizzle's `db.transaction`) — unlike the
 	// old supabase-js version, this rolls back atomically on any failure
@@ -284,7 +434,7 @@ export class DrizzleAuthRepository implements Repository {
 		profile: UserProfile;
 		security: UserSecurity;
 		preferences: UserPreferences;
-		session: UserSession;
+		session?: UserSession;
 	}): Promise<User> {
 		return db.transaction(async (tx) => {
 			const [createdUser] = await tx
@@ -292,7 +442,7 @@ export class DrizzleAuthRepository implements Repository {
 				.values({
 					id: args.user.id,
 					fullname: args.user.fullname,
-					email: args.user.email,
+					email: args.user.email.trim().toLowerCase(),
 					avatarUrl: args.user.avatarUrl,
 					role: args.user.role,
 					status: args.user.status,
@@ -337,27 +487,35 @@ export class DrizzleAuthRepository implements Repository {
 				highContrast: args.preferences.highContrast,
 			});
 
-			await tx.insert(userSessions).values({
-				id: args.session.id,
-				userId: createdUser.id,
-				deviceName: args.session.deviceName,
-				platform: args.session.platform,
-				browser: args.session.browser,
-				os: args.session.os,
-				ipAddress: args.session.ipAddress,
-				userAgent: args.session.userAgent,
-				lastSeenAt: args.session.lastSeenAt,
-				expiresAt: args.session.expiresAt,
-			});
+			if (args.session) {
+				await tx.insert(userSessions).values({
+					id: args.session.id,
+					userId: createdUser.id,
+					deviceName: args.session.deviceName,
+					platform: args.session.platform,
+					browser: args.session.browser,
+					os: args.session.os,
+					ipAddress: args.session.ipAddress,
+					userAgent: args.session.userAgent,
+					refreshTokenId: args.session.refreshTokenId,
+					lastSeenAt: args.session.lastSeenAt,
+					expiresAt: args.session.expiresAt,
+				});
+			}
 
 			return createdUser as User;
 		});
 	}
 }
 
-let cached: DrizzleAuthRepository | null = null;
+let cached: Repository | null = null;
 
-export const getAuthRepository = (): DrizzleAuthRepository => {
+export const getAuthRepository = (): Repository => {
 	if (!cached) cached = new DrizzleAuthRepository();
 	return cached;
+};
+
+/** Swap the repository (tests use an in-memory one). Pass null to restore the Drizzle default. */
+export const setAuthRepository = (repository: Repository | null): void => {
+	cached = repository;
 };

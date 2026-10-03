@@ -1,11 +1,14 @@
-import { envAppConfig } from "../env/app.env";
-import { envClientConfig } from "../env/client.env";
-import { envPublicConfig } from "../env/public.env";
+import { envAppConfig } from "@/packages/env/app.env";
+import { envClientConfig } from "@/packages/env/client.env";
+import { envPublicConfig } from "@/packages/env/public.env";
 
 const base = `${envAppConfig.API_PREFIX}/${envAppConfig.API_VERSION}`;
 
-const authRoutes = (base: string) => ({
-	base,
+const authRoutes = (path: string) => ({
+	// Path relative to the versioned API base, e.g. /auth/email
+	base: path,
+	// Full public path, e.g. /api/v1/auth/email
+	path: `${base}${path}`,
 	signin: "/signin",
 	signup: "/signup",
 });
@@ -39,12 +42,14 @@ export const appConfig = {
 
 	auth: {
 		base: "/auth",
+		csrfToken: `${base}/csrf`,
 		authEmail: {
 			...authRoutes("/auth/email"),
 			signout: "/signout",
 			refresh: "/refresh",
 			me: "/me",
 			verifyEmail: "/verify-email",
+			resendVerification: "/resend-verification",
 			forgotPassword: "/forgot-password",
 			resetPassword: "/reset-password",
 			session: "/sessions",

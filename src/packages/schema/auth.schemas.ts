@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { emailRules, fullnameRules, passwordRules } from "../configs/schemas.config";
+import {
+	booleanFlagRules,
+	confirmPasswordRules,
+	emailRules,
+	emailTokenRules,
+	fullnameRules,
+	passwordRules,
+	schemaMessages,
+	signInPasswordRules,
+} from "@/packages/configs/schemas.config";
 
 // SCHEMA
 export const signUpSchema = z
@@ -12,29 +21,50 @@ export const signUpSchema = z
 
 export const signInSchema = z.object({
 	email: emailRules,
-	password: passwordRules,
-	remember: z.coerce.boolean().optional(),
+	password: signInPasswordRules,
+	remember: booleanFlagRules.optional(),
 });
 
-export const forgetPasswordSchema = z.object({
+export const verifyEmailSchema = z.object({
+	token: emailTokenRules,
+});
+
+export const resendVerificationSchema = z.object({
 	email: emailRules,
 });
 
-export const resetPasswordSchema = z.object({
-	token: z.string().min(1, "Token is required"),
-	password: passwordRules,
-	confirmPassword: passwordRules,
+export const forgotPasswordSchema = z.object({
+	email: emailRules,
 });
+
+export const resetPasswordSchema = z
+	.object({
+		token: emailTokenRules,
+		password: passwordRules,
+		confirmPassword: confirmPasswordRules,
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: schemaMessages.passwordMismatch,
+		path: ["confirmPassword"],
+	});
 
 export const contactSchema = z.object({
 	fullname: fullnameRules,
 	email: emailRules,
 	topic: z.string().trim().min(5, "Topic is required"),
 	message: z.string().trim().min(5, "Message is required"),
-	newsletter: z.coerce.boolean().optional(),
+	newsletter: booleanFlagRules.optional(),
 });
 
 //  SCHEMA OUTPUT
 export type SignUpBody = z.infer<typeof signUpSchema>;
 
 export type SignInBody = z.infer<typeof signInSchema>;
+
+export type VerifyEmailBody = z.infer<typeof verifyEmailSchema>;
+
+export type ResendVerificationBody = z.infer<typeof resendVerificationSchema>;
+
+export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
+
+export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;

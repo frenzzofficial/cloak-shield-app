@@ -1,86 +1,109 @@
-import { Elysia } from "elysia";
+import { envAppConfig } from "@/packages/env/app.env";
+import { getClientIp } from "@/packages/utils/client-ip";
+import { AppError } from "@/packages/utils/errors";
 
-import { AppError } from "../utils/errors";
+// Per-route rate limits for the sensitive auth endpoints. They are plain `beforeHandle`
+// functions (not plugins) so each route picks the limiter that fits it.
+//
+// Storage is an in-process Map. That is exact on a single long-lived server, but on a
+// serverless platform every instance counts separately, so treat these limits as a speed bump
+// per instance rather than a global quota. The real brute-force defense is the per-account
+// lockout, which lives in the database and is shared by every instance. If you need global
+// quotas, back `createRateLimiter` with Redis (ENABLE_REDIS is already a flag).
 
-type MinimalRequestContext = {
-	headers: Record<string, string | undefined>;
-};
+export interface RateLimitContext {
+	request: Request;
+	server: Bun.Server<unknown> | null;
+}
 
-type RateLimiterOptions = {
-	/** Redis key prefix and in-memory namespace. */
+export interface RateLimiterOptions {
+	/** Namespace so different limiters never share counters. */
 	prefix: string;
-
-	/** Identifies who is being rate limited. */
-	keyFn: (context: MinimalRequestContext) => string | Promise<string>;
-
-	/** Maximum number of requests allowed in the window. */
+	/** Requests allowed per window. */
 	max: number;
-
-	/** Rate-limit window in seconds. */
+	/** Window length in seconds. */
 	windowSeconds: number;
-
-	/** Message returned when the limit is exceeded. */
 	message?: string;
-};
+	/** Derives the bucket key. Defaults to the client IP (see TRUST_PROXY). */
+	keyFn?: (context: RateLimitContext) => string;
+}
 
-type RateLimitEntry = {
+interface Entry {
 	count: number;
 	resetAt: number;
-};
+}
 
-const defaultIpKey = (context: MinimalRequestContext): string =>
-	context.headers["cf-connecting-ip"] ??
-	context.headers["x-forwarded-for"]?.split(",")[0]?.trim() ??
-	context.headers["x-real-ip"] ??
-	"unknown";
+const MAX_TRACKED_KEYS = 50_000;
 
-export const createRateLimiter = (options: RateLimiterOptions): Elysia => {
-	const { prefix, keyFn, max, windowSeconds, message } = options;
+const defaultKey = ({ request, server }: RateLimitContext): string =>
+	getClientIp(request, server?.requestIP(request)?.address, envAppConfig.TRUST_PROXY);
 
+export const createRateLimiter = (options: RateLimiterOptions) => {
+	const { prefix, max, windowSeconds, message, keyFn = defaultKey } = options;
 	const windowMs = windowSeconds * 1_000;
+	const store = new Map<string, Entry>();
+	let lastSweep = Date.now();
 
-	const memoryStore = new Map<string, RateLimitEntry>();
+	// Expired entries are normally replaced when their key returns, but a key that never
+	// comes back would sit in the Map forever. Sweep at most once per window.
+	const sweep = (now: number): void => {
+		if (now - lastSweep < windowMs && store.size < MAX_TRACKED_KEYS) return;
+		lastSweep = now;
 
-	const checkMemoryLimit = (key: string): boolean => {
+		for (const [key, entry] of store) {
+			if (entry.resetAt <= now) store.delete(key);
+		}
+
+		// Still full of live entries (a flood of unique keys): drop the oldest to bound memory.
+		while (store.size >= MAX_TRACKED_KEYS) {
+			const oldest = store.keys().next().value;
+			if (oldest === undefined) break;
+			store.delete(oldest);
+		}
+	};
+
+	return (context: RateLimitContext): void => {
 		const now = Date.now();
-		const storeKey = `${prefix}:${key}`;
+		sweep(now);
 
-		const entry = memoryStore.get(storeKey);
+		const key = `${prefix}:${keyFn(context)}`;
+		const entry = store.get(key);
 
-		if (!entry || now > entry.resetAt) {
-			memoryStore.set(storeKey, {
-				count: 1,
-				resetAt: now + windowMs,
-			});
-
-			return true;
+		if (!entry || entry.resetAt <= now) {
+			store.set(key, { count: 1, resetAt: now + windowMs });
+			return;
 		}
 
 		if (entry.count >= max) {
-			return false;
+			throw AppError.tooManyRequests(message);
 		}
 
 		entry.count += 1;
-
-		return true;
 	};
-
-	return new Elysia({
-		name: `rate-limiter:${prefix}`,
-	}).onBeforeHandle({ as: "scoped" }, async (context) => {
-		const key = await keyFn(context);
-
-		const allowed = checkMemoryLimit(key);
-
-		if (!allowed) {
-			throw AppError.tooManyRequests(message ?? "Too many requests, please try again later");
-		}
-	});
 };
 
-export const rateLimiter = createRateLimiter({
-	prefix: "ip",
-	keyFn: defaultIpKey,
+const noop = (): void => undefined;
+
+const limiter = (options: RateLimiterOptions) =>
+	envAppConfig.ENABLE_RATE_LIMIT ? createRateLimiter(options) : noop;
+
+/** Sign-up and sign-in: the endpoints password guessing and account creation go through. */
+export const credentialsLimiter = limiter({
+	prefix: "auth-credentials",
 	max: 10,
+	windowSeconds: 15 * 60,
+});
+
+/** Refresh is called automatically by clients, so it gets more headroom. */
+export const refreshLimiter = limiter({
+	prefix: "auth-refresh",
+	max: 60,
+	windowSeconds: 15 * 60,
+});
+
+/** Verification / password-reset emails: stop the API being used to spam an inbox. */
+export const emailActionLimiter = limiter({
+	prefix: "auth-email-actions",
+	max: 5,
 	windowSeconds: 15 * 60,
 });

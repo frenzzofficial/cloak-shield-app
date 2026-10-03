@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv } from "../utils/parse-env";
+import { parseEnv } from "@/packages/utils/parse-env";
 import { envAppConfig } from "./app.env";
 
 // On Vercel, default the public origin from the deployment host instead of localhost.

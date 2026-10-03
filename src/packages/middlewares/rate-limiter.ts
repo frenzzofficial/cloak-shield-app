@@ -1,7 +1,8 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "../env/app.env";
-import { AppError } from "../utils/errors";
+import { envAppConfig } from "@/packages/env/app.env";
+import { getClientIp } from "@/packages/utils/client-ip";
+import { AppError } from "@/packages/utils/errors";
 
 // Hand-written fixed-window rate limiter, keyed by client IP. No dependency — the two
 // published elysia-rate-limit-style packages have caused real trouble across different
@@ -28,8 +29,10 @@ const buckets = new Map<string, Bucket>();
 // server) can't leak memory. Oldest entries are dropped first once the cap is hit.
 const MAX_TRACKED_CLIENTS = 50_000;
 
+// Behind a proxy (Vercel, Cloudflare, ...) the socket address is the proxy itself, so using
+// it alone would put every visitor in ONE bucket. TRUST_PROXY says which header to believe.
 const getClientKey = (request: Request, server: Bun.Server<unknown> | null): string =>
-	server?.requestIP(request)?.address ?? "unknown";
+	getClientIp(request, server?.requestIP(request)?.address, envAppConfig.TRUST_PROXY);
 
 export const registerRateLimiter = (app: Elysia): void => {
 	if (!envAppConfig.ENABLE_RATE_LIMIT) return;

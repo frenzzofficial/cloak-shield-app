@@ -3,5 +3,7 @@ exact = false
 frozenLockfile = false
 
 [test]
+preload = ["./tests/setup.ts"]
 coverage = false
+coveragePathIgnorePatterns = ["tests/**"]
 coverageThreshold = { line = 0.8, function = 0.8 }

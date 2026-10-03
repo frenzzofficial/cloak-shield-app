@@ -1,10 +1,12 @@
+import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import type {
+	AuthTokenRecord,
 	User,
 	UserPreferences,
 	UserProfile,
 	UserSecurity,
 	UserSession,
-} from "../packages/schema/user.schema";
+} from "@/packages/schema/user.schema";
 
 export interface Repository {
 	// ── Core user ────────────────────────────────────────────────────────────────
@@ -28,6 +30,16 @@ export interface Repository {
 		userId: string,
 		patch: Partial<Omit<UserSecurity, "userId">>,
 	): Promise<UserSecurity>;
+	/**
+	 * Atomically counts one failed sign-in and locks the account when `maxAttempts` is reached.
+	 * An already-expired lock starts the count over at 1. Must be a single statement, so
+	 * parallel guesses cannot all read the same counter.
+	 */
+	registerFailedLogin(
+		userId: string,
+		maxAttempts: number,
+		lockSeconds: number,
+	): Promise<UserSecurity | undefined>;
 
 	// ── Profile ─────────────────────────────────────────────────────────────────
 
@@ -51,9 +63,32 @@ export interface Repository {
 
 	createSession(session: UserSession): Promise<UserSession>;
 	getSession(id: string): Promise<UserSession | undefined>;
+	/** Session + its owner in one round trip (used on every authenticated request). */
+	getSessionWithUser(id: string): Promise<{ session: UserSession; user: User } | undefined>;
+	/**
+	 * Compare-and-swap rotation: succeeds only while `currentTokenId` is still the session's
+	 * active refresh token. Returns undefined when someone else rotated first.
+	 */
+	rotateRefreshToken(
+		sessionId: string,
+		currentTokenId: string,
+		nextTokenId: string,
+	): Promise<UserSession | undefined>;
+	deleteExpiredSessionsForUser(userId: string): Promise<void>;
+	/** Keeps the `keep` most recently used sessions and deletes the rest. */
+	trimSessionsForUser(userId: string, keep: number): Promise<void>;
 	revokeSession(id: string): Promise<void>;
 	deleteSessionsForUser(userId: string): Promise<void>;
 	listSessionsForUser(userId: string): Promise<UserSession[]>;
+
+	// ── One-time email tokens ─────────────────────────────────────────────────────
+
+	createAuthToken(token: AuthTokenRecord): Promise<void>;
+	/** Marks a valid, unused, unexpired token as used and returns its user id. Single use. */
+	consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<string | undefined>;
+	deleteAuthTokensForUser(userId: string, type: AuthTokenType): Promise<void>;
+	/** Sets emailVerifiedAt and moves PENDING_VERIFICATION accounts to ACTIVE. */
+	markEmailVerified(userId: string): Promise<User | undefined>;
 
 	// ── Transactional registration ──────────────────────────────────────────────
 
@@ -62,6 +97,7 @@ export interface Repository {
 		profile: UserProfile;
 		security: UserSecurity;
 		preferences: UserPreferences;
-		session: UserSession;
+		/** Omitted when sign-up must wait for email verification before any session exists. */
+		session?: UserSession;
 	}): Promise<User>;
 }

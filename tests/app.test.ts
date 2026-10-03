@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { createApp } from "../src/app/main";
-import { AppError } from "../src/packages/utils/errors";
+import { createApp } from "@/app/main";
+import { AppError } from "@/packages/utils/errors";
 
 const app = createApp().get("/boom", () => {
 	throw AppError.forbidden("nope");

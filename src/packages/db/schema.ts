@@ -26,6 +26,10 @@ export const userStatusEnum = pgEnum("user_status", [
 ]);
 export const genderEnum = pgEnum("gender", ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
 export const themeEnum = pgEnum("theme", ["light", "dark", "system"]);
+export const authTokenTypeEnum = pgEnum("auth_token_type", [
+	"EMAIL_VERIFICATION",
+	"PASSWORD_RESET",
+]);
 
 // ── users ────────────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -107,11 +111,36 @@ export const userSessions = pgTable(
 		os: text("os").notNull().default("unknown"),
 		ipAddress: text("ip_address").notNull().default(""),
 		userAgent: text("user_agent").notNull().default(""),
+		// Refresh-token rotation. Only the token carrying `refreshTokenId` is accepted; the one
+		// before it is remembered briefly (previousRefreshTokenId + refreshRotatedAt) so two
+		// tabs refreshing at once don't log the user out, while an older replay revokes it.
+		refreshTokenId: text("refresh_token_id").notNull().default(""),
+		previousRefreshTokenId: text("previous_refresh_token_id"),
+		refreshRotatedAt: timestamp("refresh_rotated_at", { withTimezone: true }),
 		lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [index("user_sessions_user_id_idx").on(table.userId)],
+).enableRLS();
+
+// ── auth_tokens ──────────────────────────────────────────────────────────────
+// Single-use email-verification and password-reset tokens. Only a SHA-256 hash is stored,
+// so a database leak does not hand out working links.
+export const authTokens = pgTable(
+	"auth_tokens",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		type: authTokenTypeEnum("type").notNull(),
+		tokenHash: text("token_hash").notNull().unique(),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		usedAt: timestamp("used_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index("auth_tokens_user_id_idx").on(table.userId)],
 ).enableRLS();
 
 // ── relations (optional, enables db.query.users.findFirst({ with: {...} })) ──

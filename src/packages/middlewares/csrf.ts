@@ -1,11 +1,19 @@
+import { timingSafeEqual } from "node:crypto";
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "../env/app.env";
-import { AppError } from "../utils/errors";
+import { authConfig } from "@/packages/configs/auth.config";
+import { envAppConfig } from "@/packages/env/app.env";
+import { AppError } from "@/packages/utils/errors";
 
-const CSRF_COOKIE_NAME = "csrf_token";
+export const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+const safeEqual = (a: string, b: string): boolean => {
+	const left = Buffer.from(a);
+	const right = Buffer.from(b);
+	return left.length === right.length && timingSafeEqual(left, right);
+};
 
 const generateToken = (): string => {
 	const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -40,15 +48,20 @@ export const registerCsrfProtection = (app: Elysia): void => {
 			token.value = generateToken();
 			token.httpOnly = false;
 			token.path = "/";
-			token.sameSite = "lax";
-			token.secure = envAppConfig.NODE_ENV === "production";
+			token.sameSite = authConfig.cookieSameSite;
+			token.secure = authConfig.isProduction || authConfig.cookieSameSite === "none";
+			if (authConfig.cookieDomain) token.domain = authConfig.cookieDomain;
 		}
 
 		if (SAFE_METHODS.has(request.method)) return;
 		if (request.headers.has("authorization")) return;
 
 		const headerToken = request.headers.get(CSRF_HEADER_NAME);
-		if (!headerToken || headerToken !== token.value) {
+		if (
+			!headerToken ||
+			typeof token.value !== "string" ||
+			!safeEqual(headerToken, token.value)
+		) {
 			throw AppError.forbidden("Invalid or missing CSRF token");
 		}
 	});
