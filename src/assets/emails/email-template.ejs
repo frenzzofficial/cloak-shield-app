@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+
+  <title>
+    <%= subject || "Verification Code" %>
+  </title>
+
+  <style>
+    /* ---------------------------------------------
+       Shadcn-compatible design tokens
+       --------------------------------------------- */
+
+    :root {
+      --background: #ffffff;
+      --foreground: #09090b;
+
+      --card: #ffffff;
+      --card-foreground: #09090b;
+
+      --muted: #f4f4f5;
+      --muted-foreground: #71717a;
+
+      --border: #e4e4e7;
+      --input: #e4e4e7;
+
+      --primary: #18181b;
+      --primary-foreground: #fafafa;
+
+      --secondary: #f4f4f5;
+      --secondary-foreground: #18181b;
+
+      --accent: #f4f4f5;
+      --accent-foreground: #18181b;
+
+      --radius: 12px;
+    }
+
+    /* ---------------------------------------------
+       Base
+       --------------------------------------------- */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      background: var(--background);
+      color: var(--foreground);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    img {
+      border: 0;
+      display: block;
+      max-width: 100%;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    /* ---------------------------------------------
+       Layout
+       --------------------------------------------- */
+
+    .email-wrapper {
+      width: 100%;
+      padding: 40px 16px;
+      background: #f8fafc;
+    }
+
+    .email-container {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .email-content {
+      padding: 40px;
+    }
+
+    /* ---------------------------------------------
+       Brand
+       --------------------------------------------- */
+
+    .brand {
+      margin-bottom: 32px;
+    }
+
+    .brand-logo {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 40px;
+      text-align: center;
+    }
+
+    .brand-name {
+      margin-left: 10px;
+      color: var(--foreground);
+      font-size: 17px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    /* ---------------------------------------------
+       Typography
+       --------------------------------------------- */
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 20px;
+      text-transform: uppercase;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--foreground);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 36px;
+    }
+
+    .description {
+      margin: 14px 0 0;
+      color: var(--muted-foreground);
+      font-size: 15px;
+      line-height: 24px;
+    }
+
+    /* ---------------------------------------------
+       Verification Code
+       --------------------------------------------- */
+
+    .code-wrapper {
+      margin: 32px 0;
+      padding: 24px;
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .code-label {
+      margin: 0 0 10px;
+      color: var(--muted-foreground);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      line-height: 18px;
+      text-transform: uppercase;
+    }
+
+    .verification-code {
+      margin: 0;
+      color: var(--primary);
+      font-family:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        Menlo,
+        monospace;
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      line-height: 44px;
+    }
+
+    /* ---------------------------------------------
+       Security Notice
+       --------------------------------------------- */
+
+    .notice {
+      padding: 16px;
+      background: #fafafa;
+      border-left: 3px solid var(--primary);
+      border-radius: 6px;
+    }
+
+    .notice-text {
+      margin: 0;
+      color: var(--muted-foreground);
+      font-size: 13px;
+      line-height: 20px;
+    }
+
+    .notice-strong {
+      color: var(--foreground);
+      font-weight: 600;
+    }
+
+    /* ---------------------------------------------
+       Footer
+       --------------------------------------------- */
+
+    .footer {
+      padding: 24px 40px;
+      background: #fafafa;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-text {
+      margin: 0;
+      color: var(--muted-foreground);
+      font-size: 12px;
+      line-height: 19px;
+      text-align: center;
+    }
+
+    .footer-link {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    /* ---------------------------------------------
+       Mobile
+       --------------------------------------------- */
+
+    @media only screen and (max-width: 600px) {
+      .email-wrapper {
+        padding: 20px 12px;
+      }
+
+      .email-content {
+        padding: 28px 22px;
+      }
+
+      .footer {
+        padding: 20px 22px;
+      }
+
+      .title {
+        font-size: 25px;
+        line-height: 33px;
+      }
+
+      .description {
+        font-size: 15px;
+      }
+
+      .verification-code {
+        font-size: 29px;
+        letter-spacing: 0.14em;
+      }
+
+      .code-wrapper {
+        padding: 20px 12px;
+      }
+    }
+
+    /* ---------------------------------------------
+       Dark mode
+       --------------------------------------------- */
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #09090b;
+        --foreground: #fafafa;
+
+        --card: #09090b;
+        --card-foreground: #fafafa;
+
+        --muted: #18181b;
+        --muted-foreground: #a1a1aa;
+
+        --border: #27272a;
+        --input: #27272a;
+
+        --primary: #fafafa;
+        --primary-foreground: #18181b;
+
+        --secondary: #27272a;
+        --secondary-foreground: #fafafa;
+
+        --accent: #27272a;
+        --accent-foreground: #fafafa;
+      }
+
+      .email-wrapper {
+        background: #050505;
+      }
+
+      .notice,
+      .footer {
+        background: #111113;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td class="email-wrapper">
+
+        <table role="presentation" class="email-container" cellpadding="0" cellspacing="0" border="0" align="center">
+          <!-- Main Content -->
+          <tr>
+            <td class="email-content">
+
+              <!-- Brand -->
+              <div class="brand">
+                <span class="brand-logo">
+                  <%= brandInitial || "A" %>
+                </span>
+
+                <span class="brand-name">
+                  <%= brandName || "Your App" %>
+                </span>
+              </div>
+
+              <!-- Heading -->
+              <p class="eyebrow">
+                Verification required
+              </p>
+
+              <h1 class="title">
+                Verify your email address
+              </h1>
+
+              <p class="description">
+                Use the verification code below to continue with
+                <%= brandName || "your account" %>.
+              </p>
+
+              <!-- Verification Code -->
+              <div class="code-wrapper">
+                <p class="code-label">
+                  Your verification code
+                </p>
+
+                <p class="verification-code">
+                  <%= code %>
+                </p>
+              </div>
+
+              <!-- Security Notice -->
+              <div class="notice">
+                <p class="notice-text">
+                  This code will expire in
+                  <span class="notice-strong">
+                    <%= expiresIn || "10 minutes" %>
+                  </span>.
+                  For your security, never share this code with anyone.
+                </p>
+              </div>
+
+              <p class="description">
+                If you didn't request this code, you can safely ignore
+                this email. Your account remains secure.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer">
+              <p class="footer-text">
+                © <%= year || new Date().getFullYear() %>
+                  <%= brandName || "Your App" %>.
+                    All rights reserved.
+              </p>
+
+              <% if (supportUrl) { %>
+                <p class="footer-text" style="margin-top: 6px;">
+                  Need help?
+                  <a class="footer-link" href="<%= supportUrl %>">
+                    Contact support
+                  </a>
+                </p>
+                <% } %>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-import type { DeviceInfo } from "@/app/auth/email/email.services";
+import type { DeviceInfo } from "@/app/auth/auth.types";
 import { envAppConfig } from "@/packages/env/app.env";
 import { getClientIp } from "@/packages/utils/client-ip";
 import { clampUserAgent, parseUserAgent } from "@/packages/utils/user-agent";

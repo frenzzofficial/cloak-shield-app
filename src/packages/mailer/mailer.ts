@@ -1,5 +1,6 @@
-import { envAuthConfig } from "@/packages/env/auth.env";
+import { envMailConfig } from "@/packages/env/mail.env";
 import { logger } from "@/packages/utils/logger";
+import { createResendMailer } from "./resend";
 
 export interface MailMessage {
 	to: string;
@@ -8,8 +9,8 @@ export interface MailMessage {
 }
 
 /**
- * Anything that can deliver an email. Plug a real transport in at startup with setMailer()
- * (SMTP, Resend, SES, ...). No transport ships by default so the project stays dependency-free.
+ * Anything that can deliver an email. Resend ships built in (see MAIL_TRANSPORT); for SMTP, SES
+ * or anything else call setMailer() once at startup.
  */
 export interface Mailer {
 	send(message: MailMessage): Promise<void>;
@@ -23,19 +24,31 @@ const logMailer: Mailer = {
 };
 
 /**
- * Production fallback when no transport was configured. It must NOT log the body: the body
- * contains live verification / reset links, and logs are not a safe place for them.
+ * Fallback when no transport is configured. It must NOT log the body: the body contains live
+ * verification / reset links, and logs are not a safe place for them.
  */
 const unconfiguredMailer: Mailer = {
 	send: async (message) => {
-		logger.warn("email not sent: no mail transport configured (call setMailer at startup)", {
+		logger.warn("email not sent: no mail transport configured (see MAIL_TRANSPORT)", {
 			to: message.to,
 			subject: message.subject,
 		});
 	},
 };
 
-let current: Mailer = envAuthConfig.NODE_ENV === "production" ? unconfiguredMailer : logMailer;
+const resolveMailer = (): Mailer => {
+	const { MAIL_TRANSPORT, RESEND_API_KEY, MAIL_FROM, NODE_ENV } = envMailConfig;
+
+	if (RESEND_API_KEY && MAIL_FROM && (MAIL_TRANSPORT === "resend" || MAIL_TRANSPORT === "auto")) {
+		return createResendMailer({ apiKey: RESEND_API_KEY, from: MAIL_FROM });
+	}
+
+	if (MAIL_TRANSPORT === "log") return logMailer;
+	if (MAIL_TRANSPORT === "custom") return unconfiguredMailer;
+	return NODE_ENV === "production" ? unconfiguredMailer : logMailer;
+};
+
+let current: Mailer = resolveMailer();
 
 export const getMailer = (): Mailer => current;
 

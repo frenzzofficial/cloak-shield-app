@@ -107,3 +107,10 @@ export const emailActionLimiter = limiter({
 	max: 5,
 	windowSeconds: 15 * 60,
 });
+
+/** Re-authenticated actions (change password / email, delete account, session control). */
+export const accountActionLimiter = limiter({
+	prefix: "account-actions",
+	max: 20,
+	windowSeconds: 15 * 60,
+});

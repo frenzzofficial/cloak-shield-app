@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
 import { envAuthConfig } from "@/packages/env/auth.env";
@@ -143,3 +143,14 @@ export const generateOpaqueToken = (): string => randomBytes(32).toString("base6
 
 export const hashOpaqueToken = (token: string): string =>
 	createHash("sha256").update(token).digest("hex");
+
+/**
+ * Keyed hash for identifiers that must be correlatable but not readable, e.g. the email in a
+ * failed sign-in for an account that does not exist. Without the server's secret the values
+ * cannot be dictionary-matched back to addresses.
+ */
+export const hashIdentifier = (value: string): string =>
+	createHmac("sha256", envAuthConfig.AUTH_ACCESS_TOKEN_SECRET)
+		.update(value.trim().toLowerCase())
+		.digest("hex")
+		.slice(0, 32);

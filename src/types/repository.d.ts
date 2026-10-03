@@ -1,5 +1,6 @@
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import type {
+	AuditLogRecord,
 	AuthTokenRecord,
 	User,
 	UserPreferences,
@@ -75,18 +76,49 @@ export interface Repository {
 		nextTokenId: string,
 	): Promise<UserSession | undefined>;
 	deleteExpiredSessionsForUser(userId: string): Promise<void>;
+	/** Deletes one session, but only if it belongs to `userId`. False when there was no match. */
+	revokeSessionForUser(userId: string, sessionId: string): Promise<boolean>;
+	/** Deletes every session of the user except `keepSessionId`. Returns how many were removed. */
+	revokeOtherSessions(userId: string, keepSessionId: string): Promise<number>;
 	/** Keeps the `keep` most recently used sessions and deletes the rest. */
 	trimSessionsForUser(userId: string, keep: number): Promise<void>;
 	revokeSession(id: string): Promise<void>;
 	deleteSessionsForUser(userId: string): Promise<void>;
 	listSessionsForUser(userId: string): Promise<UserSession[]>;
 
+	// ── Audit trail ─────────────────────────────────────────────────────────────
+
+	createAuditLog(entry: AuditLogRecord): Promise<void>;
+	/** Newest first. `before` pages backwards (exclusive). */
+	listAuditLogsForUser(
+		userId: string,
+		options: { limit: number; before?: Date | undefined },
+	): Promise<AuditLogRecord[]>;
+	/**
+	 * Has this user signed in (or registered) from this device name since `since`? `hasHistory`
+	 * says whether they have any sign-in on record at all, so accounts that predate the audit
+	 * trail are not flagged as "new device" on their first sign-in.
+	 */
+	getDeviceHistory(
+		userId: string,
+		deviceName: string,
+		since: Date,
+	): Promise<{ knownDevice: boolean; hasHistory: boolean }>;
+
 	// ── One-time email tokens ─────────────────────────────────────────────────────
 
 	createAuthToken(token: AuthTokenRecord): Promise<void>;
-	/** Marks a valid, unused, unexpired token as used and returns its user id. Single use. */
-	consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<string | undefined>;
+	/** Marks a valid, unused, unexpired token as used and returns its owner. Single use. */
+	consumeAuthToken(
+		tokenHash: string,
+		type: AuthTokenType,
+	): Promise<{ userId: string; newEmail: string | null } | undefined>;
 	deleteAuthTokensForUser(userId: string, type: AuthTokenType): Promise<void>;
+	/**
+	 * Switches the account to a new, already-confirmed address (verified now; PENDING accounts
+	 * become ACTIVE). Throws a unique violation if another account took the address meanwhile.
+	 */
+	changeUserEmail(userId: string, newEmail: string): Promise<User | undefined>;
 	/** Sets emailVerifiedAt and moves PENDING_VERIFICATION accounts to ACTIVE. */
 	markEmailVerified(userId: string): Promise<User | undefined>;
 

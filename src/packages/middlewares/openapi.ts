@@ -28,6 +28,7 @@ export const registerOpenApi = (app: Elysia): void => {
 					{ name: "Health", description: "Service and database health checks" },
 					{ name: "API", description: "Versioned API endpoints" },
 					{ name: "Auth", description: "Email + password authentication and sessions" },
+					{ name: "Account", description: "Profile, preferences and account deletion" },
 				],
 			},
 			// The HTML pages and static assets (/, /home, /docs, /assets/*) aren't part of the

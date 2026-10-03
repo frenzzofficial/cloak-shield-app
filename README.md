@@ -124,6 +124,11 @@ Mounted under the versioned API base (`ENABLE_EMAIL_AUTH`, default on), e.g. `/a
 | POST | `/refresh` | Rotates the refresh token (cookie, or `{ "refreshToken" }` in the body) |
 | POST | `/signout` | Revokes the session. Always succeeds, even with an expired token |
 | GET | `/me`, `/sessions` | Need a valid access cookie or `Authorization: Bearer` |
+| DELETE | `/sessions/:id` | Sign one device out (own sessions only; anyone else's id is a 404) |
+| POST | `/sessions/revoke-others` | Keep this device, end every other session |
+| POST | `/change-password` | Needs the current password; ends other sessions, emails a notice |
+| POST | `/change-email`, `/confirm-email-change` | Needs the password; link goes to the NEW address, warning to the old one |
+| GET | `/activity?limit=&before=` | The signed-in user's own security history, newest first |
 | POST | `/verify-email`, `/resend-verification` | Single-use links; resend answers the same for every address |
 | POST | `/forgot-password`, `/reset-password` | Reset signs out every device and clears any lockout |
 
@@ -145,31 +150,80 @@ Mounted under the versioned API base (`ENABLE_EMAIL_AUTH`, default on), e.g. `/a
 automatically on Vercel). The default `none` ignores `X-Forwarded-For`, because a client can
 send any value and would otherwise get a fresh rate-limit bucket on every request.
 
+### Account (profile, preferences, deletion)
+
+Mounted at `/api/v1/account`, all need a signed-in user:
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/profile` | The account, its profile and its preferences |
+| PATCH | `/profile` | Send only the fields to change; `null` clears one. https-only URLs, validated time zone and locale |
+| PATCH | `/preferences` | Partial update |
+| POST | `/delete` | Needs the password. Permanent: removes the account and everything attached |
+
+The email address is not editable here; it changes only through `/auth/email/change-email`.
+Re-authenticated actions (change password, change email, delete) feed the **same** failed-attempt
+counter as sign-in, so a stolen session cannot guess the password through them.
+
+### Audit trail and security emails
+
+Every security-relevant event is written to `audit_logs`: sign-up, sign-in (success, failure and
+why), account locks, sign-out, refresh-token reuse, password and email changes, session
+revocation, profile/preference updates, deletion. It holds no passwords, tokens or raw email
+addresses: a failed sign-in for an unknown account stores only a keyed hash, profile updates
+record field *names* but never values, and deleting an account detaches its history
+(`user_id` becomes NULL) rather than keeping personal data. Users read their own history at
+`GET /api/v1/auth/email/activity`. Writing the trail is best effort: if it fails, the request
+still succeeds and the failure is logged. There is no retention job yet; delete old rows with a
+scheduled `DELETE FROM audit_logs WHERE created_at < now() - interval '1 year'` if you need one.
+
+Emails sent without the user asking: a **new-device sign-in** alert (only to confirmed addresses,
+only when the account already has sign-in history, and only for a browser/OS not seen within
+`AUTH_NEW_DEVICE_WINDOW`), **password changed**, **email change requested** and **email changed**
+(both to the OLD address, with the new one masked), and **account deleted**. These are security
+notices, so the `emailNotifications` preference does not switch them off.
+
 ### Email
 
-Verification and reset links are produced by `app/auth/email/email.services.ts` and delivered
-through a `Mailer` (`packages/mailer`). **No real transport ships**: in development messages
-are printed to the log; in production, nothing is sent and a warning is logged until you plug
-one in at startup:
+Verification, reset, change-email and the security notices above are delivered through a `Mailer`
+(`packages/mailer`). Resend is built in, over plain HTTPS with no extra dependency:
+
+```bash
+MAIL_TRANSPORT=auto            # picks Resend as soon as a key is present
+RESEND_API_KEY=re_...
+MAIL_FROM="Cloak Shield <no-reply@yourdomain.com>"   # the domain must be verified in Resend
+```
+
+Without a key, development prints messages (links included) to the log; production sends nothing
+and logs a warning, and never logs the body (it contains live links). `MAIL_TRANSPORT=log` is
+refused in production for the same reason. For SMTP, SES or anything else, set
+`MAIL_TRANSPORT=custom` and register your transport once at startup:
 
 ```ts
 import { setMailer } from "@/packages/mailer/mailer";
 
 setMailer({
 	send: async ({ to, subject, text }) => {
-		// call SMTP / Resend / SES here; throw on failure (it is logged, never shown to the caller)
+		// call your provider here; throw on failure (it is logged, never shown to the caller)
 	},
 });
 ```
 
-Links point at `CLIENT_ORIGIN` (`/verify-email?token=…`, `/reset-password?token=…`), so your
-frontend needs those two pages. Only a SHA-256 hash of each token is stored.
+Links point at `CLIENT_ORIGIN`, so the frontend needs three pages that read `?token=`:
+`/verify-email`, `/reset-password` and `/confirm-email-change`. Only a SHA-256 hash of each token
+is stored. Mail failures never change an endpoint's response.
 
 ### Database
 
-After pulling this change run `bun run db:push`: it adds `refresh_token_id`,
-`previous_refresh_token_id` and `refresh_rotated_at` to `user_sessions` and creates `auth_tokens`.
+After pulling this change run `bun run db:push`. It adds `refresh_token_id`,
+`previous_refresh_token_id` and `refresh_rotated_at` to `user_sessions`, creates `auth_tokens`
+(with `new_email` and the `EMAIL_CHANGE` type) and `audit_logs`.
 Sessions created before the change have an empty `refresh_token_id`, so those users sign in once more.
+
+> Postgres note: the audit metadata column is written with an explicit `::text::jsonb` cast.
+> Drizzle and Bun's SQL driver each JSON-encode the value, so a plain object is stored as a
+> jsonb *string* and `metadata->>'deviceName'` returns NULL. `tests/auth.postgres.test.ts` has a
+> regression test for it.
 
 ### Testing against Postgres
 
@@ -187,13 +241,12 @@ CI does exactly this against a Postgres service container.
 ### Known limitations
 
 - **Sign-up answers 409 for an existing email**, so it can be used to test whether an address is
-  registered (rate limited, but not hidden). Hiding it needs email-first sign-up, which needs a
-  real mail transport.
+  registered (rate limited, but not hidden). Hiding it needs email-first sign-up.
 - **Rate-limit counters live in process memory.** On a serverless host each instance counts
   separately, so they are a per-instance speed bump. The real brute-force defense is the
   per-account lockout, which is stored in the database and shared by every instance.
-- **`GET /health` does not query the database** (`health.service.ts` never makes a call), so it
-  reports `ok` while the database is down.
+- **Account deletion is immediate.** There is no grace period or export step yet.
+- **No audit-log retention job** (see above), and no admin view of other users' audit trails.
 
 ## Deploy on Vercel
 

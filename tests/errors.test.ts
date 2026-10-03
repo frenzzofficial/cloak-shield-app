@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import { createApp } from "@/app/main";
-import { getMailer } from "@/packages/mailer/mailer";
 import { AppError } from "@/packages/utils/errors";
 import { pick, TestClient } from "./helpers/http";
 
@@ -35,8 +34,8 @@ describe("error handler", () => {
 		expect((await client.get("/boom/unique")).status).toBe(409);
 	});
 
-	test("unknown routes are a JSON 404", async () => {
-		const response = await client.get("/nope");
+	test("an unknown API route is a JSON 404", async () => {
+		const response = await client.get("/api/v1/nope");
 		expect(response.status).toBe(404);
 		expect(pick(response.body, "success")).toBe(false);
 	});
@@ -56,11 +55,5 @@ describe("error handler", () => {
 		expect(response.status).toBe(422);
 		expect(pick(response.body, "message")).toBe("Validation failed");
 		expect(JSON.stringify(pick(response.body, "errors"))).toContain('"field":"email"');
-	});
-});
-
-describe("mailer", () => {
-	test("the default transport outside production just logs and resolves", async () => {
-		await getMailer().send({ to: "a@example.com", subject: "hi", text: "body" });
 	});
 });

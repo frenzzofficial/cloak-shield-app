@@ -10,12 +10,14 @@ import {
 	date,
 	index,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	text,
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
+import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
 
 export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN"]);
 export const userStatusEnum = pgEnum("user_status", [
@@ -29,6 +31,7 @@ export const themeEnum = pgEnum("theme", ["light", "dark", "system"]);
 export const authTokenTypeEnum = pgEnum("auth_token_type", [
 	"EMAIL_VERIFICATION",
 	"PASSWORD_RESET",
+	"EMAIL_CHANGE",
 ]);
 
 // ── users ────────────────────────────────────────────────────────────────────
@@ -136,11 +139,37 @@ export const authTokens = pgTable(
 			.references(() => users.id, { onDelete: "cascade" }),
 		type: authTokenTypeEnum("type").notNull(),
 		tokenHash: text("token_hash").notNull().unique(),
+		// EMAIL_CHANGE only: the address the link will switch the account to.
+		newEmail: text("new_email"),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		usedAt: timestamp("used_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [index("auth_tokens_user_id_idx").on(table.userId)],
+).enableRLS();
+
+// ── audit_logs ───────────────────────────────────────────────────────────────
+// Append-only trail of security events. Deliberately holds no passwords, tokens or raw email
+// addresses: failed sign-ins for unknown emails store a keyed hash, and when an account is
+// deleted `user_id` becomes NULL while `subject_id` keeps the (now meaningless) account id so
+// the history stays attributable without keeping personal data.
+export const auditLogs = pgTable(
+	"audit_logs",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+		subjectId: text("subject_id"),
+		event: text("event").$type<AuditEvent>().notNull(),
+		outcome: text("outcome").$type<AuditOutcome>().notNull(),
+		ipAddress: text("ip_address").notNull().default(""),
+		userAgent: text("user_agent").notNull().default(""),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("audit_logs_user_created_idx").on(table.userId, table.createdAt),
+		index("audit_logs_created_idx").on(table.createdAt),
+	],
 ).enableRLS();
 
 // ── relations (optional, enables db.query.users.findFirst({ with: {...} })) ──

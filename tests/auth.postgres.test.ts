@@ -1,10 +1,15 @@
-import { describe } from "bun:test";
-import { eq } from "drizzle-orm";
+import { describe, expect, test } from "bun:test";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/packages/db/client";
-import { userSessions } from "@/packages/db/schema";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
+import { auditLogs, userSessions } from "@/packages/db/schema";
+import {
+	getAuthRepository,
+	setAuthRepository,
+} from "@/packages/repository/drizzle/auth.repository";
+import { defineAccountFlowTests } from "./helpers/account-flow";
 import { defineAuthFlowTests } from "./helpers/auth-flow";
+import { pick } from "./helpers/http";
 
 // Runs the same HTTP flow suite against a real Postgres, which is the only way to check the SQL
 // (atomic lockout counter, compare-and-swap rotation, single-use tokens, unique constraints).
@@ -18,21 +23,64 @@ const url = process.env.TEST_DATABASE_URL;
 if (url) {
 	process.env.DATABASE_URL = url;
 
-	defineAuthFlowTests("email auth over HTTP (real Postgres)", {
+	const backend = {
 		install: () => setAuthRepository(null),
-		backdateRotation: async (sessionId) => {
+		backdateRotation: async (sessionId: string) => {
 			await db
 				.update(userSessions)
 				.set({ refreshRotatedAt: new Date(Date.now() - 10 * 60_000) })
 				.where(eq(userSessions.id, sessionId));
 		},
-		expireSession: async (sessionId) => {
+		expireSession: async (sessionId: string) => {
 			await db
 				.update(userSessions)
 				.set({ expiresAt: new Date(Date.now() - 1_000) })
 				.where(eq(userSessions.id, sessionId));
 		},
+		auditDump: async () => JSON.stringify(await db.select().from(auditLogs)),
+		auditEventsForSubject: async (subjectId: string) =>
+			(await db.select().from(auditLogs).where(eq(auditLogs.subjectId, subjectId))).map(
+				(row) => row.event,
+			),
+		wipeAudit: async (userId: string) => {
+			await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+		},
+	};
+
+	describe("postgres specifics", () => {
+		test("audit metadata is stored as a real jsonb object, not a JSON string", async () => {
+			setAuthRepository(null);
+			const id = crypto.randomUUID();
+
+			await getAuthRepository().createAuditLog({
+				id,
+				userId: null,
+				subjectId: null,
+				event: "SIGN_IN_SUCCESS",
+				outcome: "SUCCESS",
+				ipAddress: "",
+				userAgent: "",
+				metadata: { deviceName: "Chrome on Windows", nested: { ok: true } },
+				createdAt: new Date(),
+			});
+
+			const rows: unknown = await db.execute(
+				sql`select jsonb_typeof(metadata) as kind, metadata->>'deviceName' as device from audit_logs where id = ${id}`,
+			);
+			expect(pick(rows, "0.kind")).toBe("object");
+			expect(pick(rows, "0.device")).toBe("Chrome on Windows");
+		});
+
+		test("health reports the database as reachable", async () => {
+			const { getHealthStatus } = await import("../src/app/health/health.service");
+			const health = await getHealthStatus();
+			expect(health.status).toBe("ok");
+			expect(health.database).toBe("ok");
+		});
 	});
+
+	defineAuthFlowTests("email auth over HTTP (real Postgres)", backend);
+	defineAccountFlowTests("account security over HTTP (real Postgres)", backend);
 } else {
 	describe.skip("email auth over HTTP (real Postgres) - set TEST_DATABASE_URL to run", () => {});
 }

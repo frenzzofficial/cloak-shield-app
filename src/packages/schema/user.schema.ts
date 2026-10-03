@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import { UserGenderValues } from "@/packages/configs/gender.config";
 import { UserRolesValues, userStatusValues } from "@/packages/configs/roles.config";
@@ -84,8 +85,23 @@ export interface AuthTokenRecord {
 	userId: string;
 	type: AuthTokenType;
 	tokenHash: string;
+	/** EMAIL_CHANGE only: the address the link switches the account to. */
+	newEmail: string | null;
 	expiresAt: Date;
 	usedAt: Date | null;
+	createdAt: Date;
+}
+
+/** One row of the security audit trail. */
+export interface AuditLogRecord {
+	id: string;
+	userId: string | null;
+	subjectId: string | null;
+	event: AuditEvent;
+	outcome: AuditOutcome;
+	ipAddress: string;
+	userAgent: string;
+	metadata: Record<string, unknown>;
 	createdAt: Date;
 }
 

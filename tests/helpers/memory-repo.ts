@@ -1,5 +1,6 @@
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import type {
+	AuditLogRecord,
 	AuthTokenRecord,
 	User,
 	UserPreferences,
@@ -26,6 +27,7 @@ export class InMemoryAuthRepository implements Repository {
 	private preferences = new Map<string, UserPreferences>();
 	private sessions = new Map<string, UserSession>();
 	private tokens = new Map<string, AuthTokenRecord>();
+	private audit: AuditLogRecord[] = [];
 
 	// ── Core user ───────────────────────────────────────────────────────────
 	async findUserByEmail(email: string): Promise<User | undefined> {
@@ -71,6 +73,10 @@ export class InMemoryAuthRepository implements Repository {
 		this.preferences.delete(id);
 		await this.deleteSessionsForUser(id);
 		for (const [key, token] of this.tokens) if (token.userId === id) this.tokens.delete(key);
+		// Like ON DELETE SET NULL: history stays, the link to the account goes.
+		this.audit = this.audit.map((entry) =>
+			entry.userId === id ? { ...entry, userId: null } : entry,
+		);
 	}
 
 	// ── Security ────────────────────────────────────────────────────────────
@@ -132,6 +138,14 @@ export class InMemoryAuthRepository implements Repository {
 	): Promise<UserProfile> {
 		const current = this.profiles.get(userId);
 		if (!current) throw AppError.notFound("User profile not found");
+		// Like the real UNIQUE(username) index.
+		const wanted = patch.username;
+		if (
+			wanted &&
+			[...this.profiles.values()].some((p) => p.userId !== userId && p.username === wanted)
+		) {
+			throw uniqueViolation("user_profiles_username_unique");
+		}
 		const next = { ...current, ...patch, updatedAt: new Date() };
 		this.profiles.set(userId, next);
 		return next;
@@ -210,6 +224,24 @@ export class InMemoryAuthRepository implements Repository {
 			.map((session) => ({ ...session }));
 	}
 
+	async revokeSessionForUser(userId: string, sessionId: string): Promise<boolean> {
+		const session = this.sessions.get(sessionId);
+		if (!session || session.userId !== userId) return false;
+		this.sessions.delete(sessionId);
+		return true;
+	}
+
+	async revokeOtherSessions(userId: string, keepSessionId: string): Promise<number> {
+		let removed = 0;
+		for (const [id, session] of this.sessions) {
+			if (session.userId === userId && id !== keepSessionId) {
+				this.sessions.delete(id);
+				removed += 1;
+			}
+		}
+		return removed;
+	}
+
 	async deleteExpiredSessionsForUser(userId: string): Promise<void> {
 		const now = Date.now();
 		for (const [id, session] of this.sessions) {
@@ -223,6 +255,54 @@ export class InMemoryAuthRepository implements Repository {
 		for (const session of surplus) this.sessions.delete(session.id);
 	}
 
+	// ── Audit trail ─────────────────────────────────────────────────────────
+	async createAuditLog(entry: AuditLogRecord): Promise<void> {
+		this.audit.push({ ...entry });
+	}
+
+	async listAuditLogsForUser(
+		userId: string,
+		options: { limit: number; before?: Date | undefined },
+	): Promise<AuditLogRecord[]> {
+		const before = options.before?.getTime();
+		return this.audit
+			.filter((entry) => entry.userId === userId)
+			.filter((entry) => before === undefined || entry.createdAt.getTime() < before)
+			.sort(
+				(a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id),
+			)
+			.slice(0, options.limit);
+	}
+
+	async getDeviceHistory(
+		userId: string,
+		deviceName: string,
+		since: Date,
+	): Promise<{ knownDevice: boolean; hasHistory: boolean }> {
+		const signIns = this.audit.filter(
+			(entry) =>
+				entry.userId === userId &&
+				entry.outcome === "SUCCESS" &&
+				(entry.event === "SIGN_UP" || entry.event === "SIGN_IN_SUCCESS"),
+		);
+		const knownDevice = signIns.some(
+			(entry) =>
+				entry.createdAt.getTime() > since.getTime() &&
+				entry.metadata.deviceName === deviceName,
+		);
+		return { knownDevice, hasHistory: signIns.length > 0 };
+	}
+
+	/** Test-only: forget a user's audit history (an account that predates the trail). */
+	wipeAuditFor(userId: string): void {
+		this.audit = this.audit.filter((entry) => entry.userId !== userId);
+	}
+
+	/** Test-only: every audit row, for assertions on what is (not) stored. */
+	allAuditLogs(): AuditLogRecord[] {
+		return this.audit.map((entry) => ({ ...entry }));
+	}
+
 	// ── One-time tokens ─────────────────────────────────────────────────────
 	async createAuthToken(token: AuthTokenRecord): Promise<void> {
 		if ([...this.tokens.values()].some((existing) => existing.tokenHash === token.tokenHash)) {
@@ -231,7 +311,10 @@ export class InMemoryAuthRepository implements Repository {
 		this.tokens.set(token.id, { ...token });
 	}
 
-	async consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<string | undefined> {
+	async consumeAuthToken(
+		tokenHash: string,
+		type: AuthTokenType,
+	): Promise<{ userId: string; newEmail: string | null } | undefined> {
 		const token = [...this.tokens.values()].find(
 			(candidate) => candidate.tokenHash === tokenHash && candidate.type === type,
 		);
@@ -239,13 +322,32 @@ export class InMemoryAuthRepository implements Repository {
 			return undefined;
 
 		token.usedAt = new Date();
-		return token.userId;
+		return { userId: token.userId, newEmail: token.newEmail };
 	}
 
 	async deleteAuthTokensForUser(userId: string, type: AuthTokenType): Promise<void> {
 		for (const [id, token] of this.tokens) {
 			if (token.userId === userId && token.type === type) this.tokens.delete(id);
 		}
+	}
+
+	async changeUserEmail(userId: string, newEmail: string): Promise<User | undefined> {
+		const user = this.users.get(userId);
+		if (!user) return undefined;
+
+		const email = newEmail.trim().toLowerCase();
+		const owner = await this.findUserByEmail(email);
+		if (owner && owner.id !== userId) throw uniqueViolation("users_email_unique");
+
+		const next: User = {
+			...user,
+			email,
+			emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+			status: user.status === "PENDING_VERIFICATION" ? "ACTIVE" : user.status,
+			updatedAt: new Date(),
+		};
+		this.users.set(userId, next);
+		return next;
 	}
 
 	async markEmailVerified(userId: string): Promise<User | undefined> {

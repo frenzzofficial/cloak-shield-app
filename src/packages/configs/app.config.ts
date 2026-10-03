@@ -40,6 +40,13 @@ export const appConfig = {
 		base,
 	},
 
+	account: {
+		path: `${base}/account`,
+		profile: "/profile",
+		preferences: "/preferences",
+		delete: "/delete",
+	},
+
 	auth: {
 		base: "/auth",
 		csrfToken: `${base}/csrf`,
@@ -53,6 +60,12 @@ export const appConfig = {
 			forgotPassword: "/forgot-password",
 			resetPassword: "/reset-password",
 			session: "/sessions",
+			sessionById: "/sessions/:id",
+			revokeOtherSessions: "/sessions/revoke-others",
+			changePassword: "/change-password",
+			changeEmail: "/change-email",
+			confirmEmailChange: "/confirm-email-change",
+			activity: "/activity",
 		},
 		authPhone: {
 			...authRoutes("/auth/phone"),

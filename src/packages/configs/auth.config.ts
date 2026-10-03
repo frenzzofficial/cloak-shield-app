@@ -17,6 +17,7 @@ export const authConfig = {
 	cookieDomain: envAuthConfig.AUTH_COOKIE_DOMAIN,
 
 	requireEmailVerification: envAuthConfig.AUTH_REQUIRE_EMAIL_VERIFICATION,
+	newDeviceWindowSeconds: envAuthConfig.AUTH_NEW_DEVICE_WINDOW,
 	verifyTokenTtlSeconds: envAuthConfig.AUTH_VERIFY_TOKEN_TTL,
 	resetTokenTtlSeconds: envAuthConfig.AUTH_RESET_TOKEN_TTL,
 

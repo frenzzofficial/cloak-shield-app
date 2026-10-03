@@ -1,7 +1,9 @@
-import { and, desc, eq, gt, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import { AuditEvents } from "@/packages/configs/audit.config";
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import { db } from "@/packages/db/client";
 import {
+	auditLogs,
 	authTokens,
 	userPreferences,
 	userProfiles,
@@ -10,6 +12,7 @@ import {
 	users,
 } from "@/packages/db/schema";
 import type {
+	AuditLogRecord,
 	AuthTokenRecord,
 	User,
 	UserPreferences,
@@ -337,6 +340,24 @@ class DrizzleAuthRepository implements Repository {
 			.where(and(eq(userSessions.userId, userId), lt(userSessions.expiresAt, new Date())));
 	}
 
+	async revokeSessionForUser(userId: string, sessionId: string): Promise<boolean> {
+		const removed = await db
+			.delete(userSessions)
+			.where(and(eq(userSessions.id, sessionId), eq(userSessions.userId, userId)))
+			.returning({ id: userSessions.id });
+
+		return removed.length > 0;
+	}
+
+	async revokeOtherSessions(userId: string, keepSessionId: string): Promise<number> {
+		const removed = await db
+			.delete(userSessions)
+			.where(and(eq(userSessions.userId, userId), ne(userSessions.id, keepSessionId)))
+			.returning({ id: userSessions.id });
+
+		return removed.length;
+	}
+
 	async trimSessionsForUser(userId: string, keep: number): Promise<void> {
 		const surplus = await db
 			.select({ id: userSessions.id })
@@ -373,6 +394,72 @@ class DrizzleAuthRepository implements Repository {
 		return rows as UserSession[];
 	}
 
+	// ── Audit trail ─────────────────────────────────────────────────────────
+
+	async createAuditLog(entry: AuditLogRecord): Promise<void> {
+		await db.insert(auditLogs).values({
+			id: entry.id,
+			userId: entry.userId,
+			subjectId: entry.subjectId,
+			event: entry.event,
+			outcome: entry.outcome,
+			ipAddress: entry.ipAddress,
+			userAgent: entry.userAgent,
+			// Drizzle JSON-encodes the object and Bun's driver encodes it again, so a plain object
+			// lands as a jsonb STRING and `metadata->>'x'` queries return NULL. A bare ::jsonb cast
+			// is not enough (the driver then types the parameter as jsonb and quotes the string
+			// once more); forcing the parameter to text first sends it verbatim.
+			metadata: sql`${JSON.stringify(entry.metadata)}::text::jsonb`,
+			createdAt: entry.createdAt,
+		});
+	}
+
+	async listAuditLogsForUser(
+		userId: string,
+		options: { limit: number; before?: Date | undefined },
+	): Promise<AuditLogRecord[]> {
+		return db
+			.select()
+			.from(auditLogs)
+			.where(
+				and(
+					eq(auditLogs.userId, userId),
+					options.before ? lt(auditLogs.createdAt, options.before) : undefined,
+				),
+			)
+			.orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+			.limit(options.limit);
+	}
+
+	async getDeviceHistory(
+		userId: string,
+		deviceName: string,
+		since: Date,
+	): Promise<{ knownDevice: boolean; hasHistory: boolean }> {
+		const signIns = and(
+			eq(auditLogs.userId, userId),
+			eq(auditLogs.outcome, "SUCCESS"),
+			inArray(auditLogs.event, [AuditEvents.SIGN_UP, AuditEvents.SIGN_IN_SUCCESS]),
+		);
+
+		const [known] = await db
+			.select({ id: auditLogs.id })
+			.from(auditLogs)
+			.where(
+				and(
+					signIns,
+					gt(auditLogs.createdAt, since),
+					sql`${auditLogs.metadata}->>'deviceName' = ${deviceName}`,
+				),
+			)
+			.limit(1);
+
+		if (known) return { knownDevice: true, hasHistory: true };
+
+		const [any] = await db.select({ id: auditLogs.id }).from(auditLogs).where(signIns).limit(1);
+		return { knownDevice: false, hasHistory: any !== undefined };
+	}
+
 	// ── One-time email tokens ───────────────────────────────────────────────
 
 	async createAuthToken(token: AuthTokenRecord): Promise<void> {
@@ -381,11 +468,15 @@ class DrizzleAuthRepository implements Repository {
 			userId: token.userId,
 			type: token.type,
 			tokenHash: token.tokenHash,
+			newEmail: token.newEmail,
 			expiresAt: token.expiresAt,
 		});
 	}
 
-	async consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<string | undefined> {
+	async consumeAuthToken(
+		tokenHash: string,
+		type: AuthTokenType,
+	): Promise<{ userId: string; newEmail: string | null } | undefined> {
 		// Mark-as-used and check-validity in one statement: two requests carrying the same
 		// link cannot both succeed.
 		const [row] = await db
@@ -399,15 +490,31 @@ class DrizzleAuthRepository implements Repository {
 					gt(authTokens.expiresAt, new Date()),
 				),
 			)
-			.returning({ userId: authTokens.userId });
+			.returning({ userId: authTokens.userId, newEmail: authTokens.newEmail });
 
-		return row?.userId;
+		return row;
 	}
 
 	async deleteAuthTokensForUser(userId: string, type: AuthTokenType): Promise<void> {
 		await db
 			.delete(authTokens)
 			.where(and(eq(authTokens.userId, userId), eq(authTokens.type, type)));
+	}
+
+	async changeUserEmail(userId: string, newEmail: string): Promise<User | undefined> {
+		const [row] = await db
+			.update(users)
+			.set({
+				email: newEmail.trim().toLowerCase(),
+				// The link was delivered to the new mailbox, which proves control of it.
+				emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())`,
+				status: sql`(CASE WHEN ${users.status} = 'PENDING_VERIFICATION' THEN 'ACTIVE'::user_status ELSE ${users.status} END)`,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, userId))
+			.returning();
+
+		return row;
 	}
 
 	async markEmailVerified(userId: string): Promise<User | undefined> {

@@ -11,26 +11,32 @@ export interface FlowBackend {
 	install(): Promise<void> | void;
 	backdateRotation(sessionId: string): Promise<void>;
 	expireSession(sessionId: string): Promise<void>;
+	/** Every audit row serialized, for asserting what is NOT stored (raw emails, passwords). */
+	auditDump(): Promise<string>;
+	/** Event names recorded for an account id, including after the account was deleted. */
+	auditEventsForSubject(subjectId: string): Promise<string[]>;
+	/** Forget an account's sign-in history, to mimic an account that predates the audit trail. */
+	wipeAudit(userId: string): Promise<void>;
 }
 
-const BASE = "/api/v1/auth/email";
-const PASSWORD = "Correct-Horse-9-Battery!";
-const NEW_PASSWORD = "Another-Horse-7-Staple!";
-const CHROME_WINDOWS =
+export const BASE = "/api/v1/auth/email";
+export const PASSWORD = "Correct-Horse-9-Battery!";
+export const NEW_PASSWORD = "Another-Horse-7-Staple!";
+export const CHROME_WINDOWS =
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const IPHONE =
+export const IPHONE =
 	"Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 const repo = () => getAuthRepository();
-const newEmail = (prefix = "user"): string =>
+export const newEmail = (prefix = "user"): string =>
 	`${prefix}-${crypto.randomUUID().slice(0, 8)}@example.com`;
 
-const str = (value: unknown): string => {
+export const str = (value: unknown): string => {
 	if (typeof value !== "string") throw new Error(`expected a string, got ${typeof value}`);
 	return value;
 };
 
-const asArray = (value: unknown): unknown[] => {
+export const asArray = (value: unknown): unknown[] => {
 	if (!Array.isArray(value)) throw new Error("expected an array");
 	return value;
 };

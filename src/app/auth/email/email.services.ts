@@ -1,7 +1,6 @@
+import { AuditEvents } from "@/packages/configs/audit.config";
 import { authConfig } from "@/packages/configs/auth.config";
-import { type AuthTokenType, AuthTokenTypes } from "@/packages/configs/auth-token.config";
-import { envClientConfig } from "@/packages/env/client.env";
-import { getMailer } from "@/packages/mailer/mailer";
+import { AuthTokenTypes } from "@/packages/configs/auth-token.config";
 import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
 import type {
 	ForgotPasswordBody,
@@ -13,7 +12,7 @@ import type {
 } from "@/packages/schema/auth.schemas";
 import type { User, UserSession } from "@/packages/schema/user.schema";
 import {
-	generateOpaqueToken,
+	hashIdentifier,
 	hashOpaqueToken,
 	hashPassword,
 	signAccessToken,
@@ -23,31 +22,22 @@ import {
 	verifyPassword,
 	verifyRefreshToken,
 } from "@/packages/utils/auth";
+import { bestEffort } from "@/packages/utils/best-effort";
 import { isUniqueViolation } from "@/packages/utils/db-errors";
 import { AppError } from "@/packages/utils/errors";
 import { logger } from "@/packages/utils/logger";
 
 const repo = () => getAuthRepository();
 
-export interface DeviceInfo {
-	deviceName: string;
-	platform: string;
-	browser: string;
-	os: string;
-	ipAddress: string;
-	userAgent: string;
-}
-
-export interface AuthTokens {
-	accessToken: string;
-	refreshToken: string;
-}
-
-/** A freshly issued login: the tokens plus the session they belong to (its expiry drives cookies). */
-export interface SessionTokens {
-	tokens: AuthTokens;
-	session: UserSession;
-}
+import { recordAudit } from "../audit.service";
+import type { AuthTokens, DeviceInfo, SessionTokens } from "../auth.types";
+import {
+	notifyNewDevice,
+	notifyPasswordChanged,
+	sendResetLink,
+	sendVerificationLink,
+} from "../auth-mail";
+import { issueEmailToken } from "../email-tokens";
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
@@ -107,71 +97,22 @@ const issueTokens = async (
 
 // ── Email delivery ─────────────────────────────────────────────────────────────
 
-// Mail problems must never change an endpoint's response: a visible failure for some emails
-// but not others would leak which addresses have accounts, and a sign-up should not fail
-// because the mail provider hiccuped.
-const bestEffort = async (label: string, task: () => Promise<void>): Promise<void> => {
-	try {
-		await task();
-	} catch (error) {
-		logger.error(`${label} failed`, {
-			message: error instanceof Error ? error.message : String(error),
-		});
-	}
-};
-
-const issueEmailToken = async (
-	user: User,
-	type: AuthTokenType,
-	ttlSeconds: number,
-): Promise<string> => {
-	// Only the newest link works: requesting another invalidates the previous one.
-	await repo().deleteAuthTokensForUser(user.id, type);
-
-	const token = generateOpaqueToken();
-	const now = new Date();
-
-	await repo().createAuthToken({
-		id: crypto.randomUUID(),
-		userId: user.id,
-		type,
-		tokenHash: hashOpaqueToken(token),
-		expiresAt: new Date(now.getTime() + ttlSeconds * 1_000),
-		usedAt: null,
-		createdAt: now,
-	});
-
-	return token;
-};
-
 const sendVerificationEmail = async (user: User): Promise<void> => {
 	const token = await issueEmailToken(
-		user,
-		"EMAIL_VERIFICATION",
+		user.id,
+		AuthTokenTypes.EMAIL_VERIFICATION,
 		authConfig.verifyTokenTtlSeconds,
 	);
-	const link = `${envClientConfig.CLIENT_ORIGIN}/verify-email?token=${encodeURIComponent(token)}`;
-
-	await getMailer().send({
-		to: user.email,
-		subject: "Verify your email address",
-		text: `Confirm your email address by opening this link:\n\n${link}\n\nIf you did not create an account, you can ignore this message.`,
-	});
+	await sendVerificationLink(user.email, token);
 };
 
 const sendPasswordResetEmail = async (user: User): Promise<void> => {
 	const token = await issueEmailToken(
-		user,
+		user.id,
 		AuthTokenTypes.PASSWORD_RESET,
 		authConfig.resetTokenTtlSeconds,
 	);
-	const link = `${envClientConfig.CLIENT_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`;
-
-	await getMailer().send({
-		to: user.email,
-		subject: "Reset your password",
-		text: `Choose a new password by opening this link:\n\n${link}\n\nIf you did not ask for this, you can ignore this message; your password has not changed.`,
-	});
+	await sendResetLink(user.email, token);
 };
 
 // ── Sign up ────────────────────────────────────────────────────────────────────
@@ -266,6 +207,7 @@ export const signUp = async (
 		throw error;
 	}
 
+	await recordAudit({ event: AuditEvents.SIGN_UP, userId: user.id, device });
 	await bestEffort("verification email", () => sendVerificationEmail(user));
 
 	if (!session) return { user, login: null };
@@ -284,27 +226,53 @@ export const signIn = async (
 	input: SignInBody,
 	device: DeviceInfo,
 ): Promise<{ user: User; login: SessionTokens }> => {
-	const user = await repo().findUserByEmail(normalizeEmail(input.email));
+	const email = normalizeEmail(input.email);
+	const user = await repo().findUserByEmail(email);
 	const security = user ? await repo().getUserSecurity(user.id) : undefined;
+
+	// The trail records WHY a sign-in failed, but never the password, and for unknown accounts
+	// only a keyed hash of the email (so repeated attempts can be correlated, not read).
+	const failed = (reason: string, userId?: string) =>
+		recordAudit({
+			event: AuditEvents.SIGN_IN_FAILURE,
+			outcome: "FAILURE",
+			userId,
+			device,
+			metadata: { reason, ...(userId ? {} : { emailHash: hashIdentifier(email) }) },
+		});
 
 	if (!user || !security) {
 		// Same argon2 cost as a real attempt, so response time does not reveal the email is unknown.
 		await verifyAgainstDummyHash(input.password);
+		await failed("unknown_email");
 		throw invalidCredentials();
 	}
 
 	if (security.lockedUntil && security.lockedUntil.getTime() > Date.now()) {
 		await verifyAgainstDummyHash(input.password);
+		await failed("locked", user.id);
 		throw invalidCredentials();
 	}
 
 	if (!(await verifyPassword(input.password, security.passwordHash))) {
 		// Atomic in SQL: parallel guesses each count, and an expired lock restarts at 1.
-		await repo().registerFailedLogin(
+		const updated = await repo().registerFailedLogin(
 			user.id,
 			authConfig.maxFailedLogins,
 			authConfig.lockoutSeconds,
 		);
+		await failed("bad_password", user.id);
+
+		// Exactly one request crosses the threshold, so the lock is recorded once.
+		if (updated?.failedLoginAttempts === authConfig.maxFailedLogins) {
+			await recordAudit({
+				event: AuditEvents.ACCOUNT_LOCKED,
+				outcome: "FAILURE",
+				userId: user.id,
+				device,
+				metadata: { lockSeconds: authConfig.lockoutSeconds },
+			});
+		}
 		throw invalidCredentials();
 	}
 
@@ -314,10 +282,12 @@ export const signIn = async (
 	}
 
 	if (isBlocked(user)) {
+		await failed("inactive", user.id);
 		throw AppError.forbidden("This account is no longer active");
 	}
 
 	if (authConfig.requireEmailVerification && user.status === "PENDING_VERIFICATION") {
+		await failed("unverified", user.id);
 		throw AppError.forbidden("Please verify your email address before signing in");
 	}
 
@@ -327,11 +297,31 @@ export const signIn = async (
 		? authConfig.longSessionTtlSeconds
 		: authConfig.shortSessionTtlSeconds;
 
+	// Looked up BEFORE this sign-in is recorded, so it can only match earlier ones.
+	const history = await repo().getDeviceHistory(
+		user.id,
+		device.deviceName,
+		new Date(now.getTime() - authConfig.newDeviceWindowSeconds * 1_000),
+	);
+
 	await repo().deleteExpiredSessionsForUser(user.id);
 	const session = await repo().createSession(
 		buildSession(user.id, device, ttl, refreshTokenId, now),
 	);
 	await repo().trimSessionsForUser(user.id, authConfig.maxSessionsPerUser);
+
+	await recordAudit({
+		event: AuditEvents.SIGN_IN_SUCCESS,
+		userId: user.id,
+		device,
+		metadata: { remember: Boolean(input.remember) },
+	});
+
+	// Only for confirmed addresses (an unverified one may belong to someone else), and only when
+	// the account has a sign-in history, so accounts that predate the trail are not all flagged.
+	if (history.hasHistory && !history.knownDevice && user.emailVerifiedAt) {
+		await notifyNewDevice(user, device);
+	}
 
 	return {
 		user,
@@ -349,6 +339,7 @@ export const signIn = async (
 const rejectStaleRefresh = async (
 	session: UserSession,
 	presentedTokenId: string,
+	device: DeviceInfo,
 ): Promise<never> => {
 	const rotatedAt = session.refreshRotatedAt?.getTime() ?? 0;
 	const justRotated =
@@ -364,10 +355,17 @@ const rejectStaleRefresh = async (
 		sessionId: session.id,
 		userId: session.userId,
 	});
+	await recordAudit({
+		event: AuditEvents.REFRESH_REUSE_DETECTED,
+		outcome: "FAILURE",
+		userId: session.userId,
+		device,
+		metadata: { sessionId: session.id },
+	});
 	throw AppError.unauthorized("Refresh token reuse detected; please sign in again");
 };
 
-export const refresh = async (refreshToken: string): Promise<SessionTokens> => {
+export const refresh = async (refreshToken: string, device: DeviceInfo): Promise<SessionTokens> => {
 	const claims = await verifyRefreshToken(refreshToken);
 
 	const session = await repo().getSession(claims.sessionId);
@@ -381,7 +379,7 @@ export const refresh = async (refreshToken: string): Promise<SessionTokens> => {
 	}
 
 	if (session.refreshTokenId !== claims.tokenId) {
-		return rejectStaleRefresh(session, claims.tokenId);
+		return rejectStaleRefresh(session, claims.tokenId, device);
 	}
 
 	const user = await repo().findUserById(claims.userId);
@@ -405,13 +403,14 @@ export const refresh = async (refreshToken: string): Promise<SessionTokens> => {
 
 // ── Sign out ───────────────────────────────────────────────────────────────────
 
-const sessionIdFrom = async (tokens: {
+const claimsFrom = async (tokens: {
 	refreshToken?: string | undefined;
 	accessToken?: string | undefined;
-}): Promise<string | undefined> => {
+}): Promise<{ sessionId: string; userId: string } | undefined> => {
 	if (tokens.refreshToken) {
 		try {
-			return (await verifyRefreshToken(tokens.refreshToken)).sessionId;
+			const { sessionId, userId } = await verifyRefreshToken(tokens.refreshToken);
+			return { sessionId, userId };
 		} catch {
 			// fall through to the access token
 		}
@@ -419,7 +418,8 @@ const sessionIdFrom = async (tokens: {
 
 	if (tokens.accessToken) {
 		try {
-			return (await verifyAccessToken(tokens.accessToken)).sessionId;
+			const { sessionId, userId } = await verifyAccessToken(tokens.accessToken);
+			return { sessionId, userId };
 		} catch {
 			// nothing valid presented
 		}
@@ -433,12 +433,18 @@ const sessionIdFrom = async (tokens: {
  * cookies are cleared either way). A valid refresh OR access token revokes that session, so a
  * user whose access token has already expired can still sign out.
  */
-export const signOut = async (tokens: {
-	refreshToken?: string | undefined;
-	accessToken?: string | undefined;
-}): Promise<void> => {
-	const sessionId = await sessionIdFrom(tokens);
-	if (sessionId) await repo().revokeSession(sessionId);
+export const signOut = async (
+	tokens: {
+		refreshToken?: string | undefined;
+		accessToken?: string | undefined;
+	},
+	device: DeviceInfo,
+): Promise<void> => {
+	const claims = await claimsFrom(tokens);
+	if (!claims) return;
+
+	await repo().revokeSession(claims.sessionId);
+	await recordAudit({ event: AuditEvents.SIGN_OUT, userId: claims.userId, device });
 };
 
 // ── Me / sessions ──────────────────────────────────────────────────────────────
@@ -457,14 +463,16 @@ export const listSessions = async (userId: string): Promise<UserSession[]> => {
 
 // ── Email verification ─────────────────────────────────────────────────────────
 
-export const verifyEmail = async (input: VerifyEmailBody): Promise<void> => {
-	const userId = await repo().consumeAuthToken(
+export const verifyEmail = async (input: VerifyEmailBody, device: DeviceInfo): Promise<void> => {
+	const consumed = await repo().consumeAuthToken(
 		hashOpaqueToken(input.token),
-		"EMAIL_VERIFICATION",
+		AuthTokenTypes.EMAIL_VERIFICATION,
 	);
-	const user = userId ? await repo().markEmailVerified(userId) : undefined;
+	const user = consumed ? await repo().markEmailVerified(consumed.userId) : undefined;
 
 	if (!user) throw AppError.badRequest("This verification link is invalid or has expired");
+
+	await recordAudit({ event: AuditEvents.EMAIL_VERIFIED, userId: user.id, device });
 };
 
 /** Always resolves the same way, whether or not the address has an account. */
@@ -481,23 +489,35 @@ export const resendVerification = async (input: ResendVerificationBody): Promise
 // ── Password reset ─────────────────────────────────────────────────────────────
 
 /** Always resolves the same way, whether or not the address has an account. */
-export const forgotPassword = async (input: ForgotPasswordBody): Promise<void> => {
+export const forgotPassword = async (
+	input: ForgotPasswordBody,
+	device: DeviceInfo,
+): Promise<void> => {
 	await bestEffort("password reset email", async () => {
 		const user = await repo().findUserByEmail(normalizeEmail(input.email));
 
 		if (user && !isBlocked(user)) {
 			await sendPasswordResetEmail(user);
+			await recordAudit({
+				event: AuditEvents.PASSWORD_RESET_REQUESTED,
+				userId: user.id,
+				device,
+			});
 		}
 	});
 };
 
-export const resetPassword = async (input: ResetPasswordBody): Promise<void> => {
-	const userId = await repo().consumeAuthToken(
+export const resetPassword = async (
+	input: ResetPasswordBody,
+	device: DeviceInfo,
+): Promise<void> => {
+	const consumed = await repo().consumeAuthToken(
 		hashOpaqueToken(input.token),
 		AuthTokenTypes.PASSWORD_RESET,
 	);
-	if (!userId) throw AppError.badRequest("This reset link is invalid or has expired");
+	if (!consumed) throw AppError.badRequest("This reset link is invalid or has expired");
 
+	const { userId } = consumed;
 	const now = new Date();
 
 	await repo().updateUserSecurity(userId, {
@@ -511,4 +531,9 @@ export const resetPassword = async (input: ResetPasswordBody): Promise<void> => 
 	// Whoever knew the old password (or stole a session) must not stay signed in.
 	await repo().deleteSessionsForUser(userId);
 	await repo().deleteAuthTokensForUser(userId, AuthTokenTypes.PASSWORD_RESET);
+
+	await recordAudit({ event: AuditEvents.PASSWORD_RESET_COMPLETED, userId, device });
+
+	const user = await repo().findUserById(userId);
+	if (user) await notifyPasswordChanged(user, device);
 };

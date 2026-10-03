@@ -2,6 +2,7 @@
 	"version": "0.2",
 	"language": "en",
 	"words": [
+		"Ánna",
 		"biomejs",
 		"bunx",
 		"chargebacks",
@@ -9,6 +10,7 @@
 		"cloak",
 		"commitlint",
 		"COPPA",
+		"cyantrix",
 		"depcruise",
 		"dotenv",
 		"drizzle",
@@ -54,8 +56,7 @@
 		"unconfigured",
 		"vercel",
 		"yopmail",
-		"zod",
-		"Ánna"
+		"zod"
 	],
 	"ignorePaths": ["bun.lock", "dist", "coverage", "node_modules"]
 }
