@@ -1,5 +1,11 @@
 import type { Elysia } from "elysia";
-
+import {
+	clearAuthCookies,
+	readRefreshToken,
+	setAuthCookies,
+	wantsTokensInBody,
+} from "@/app/auth/auth-cookies";
+import { extractDeviceInfo } from "@/app/auth/device";
 import { appConfig } from "@/packages/configs/app.config";
 import { envAppConfig } from "@/packages/env/app.env";
 import {
@@ -21,13 +27,6 @@ import {
 	verifyEmailSchema,
 } from "@/packages/schema/auth.schemas";
 import type { User, UserSession } from "@/packages/schema/user.schema";
-import {
-	clearAuthCookies,
-	readRefreshToken,
-	setAuthCookies,
-	wantsTokensInBody,
-} from "../../../packages/utils/auth-cookies";
-import { extractDeviceInfo } from "../../../packages/utils/device";
 import {
 	forgotPassword,
 	getMe,
