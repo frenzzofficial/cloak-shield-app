@@ -15,8 +15,6 @@ import {
 	hashIdentifier,
 	hashOpaqueToken,
 	hashPassword,
-	signAccessToken,
-	signRefreshToken,
 	verifyAccessToken,
 	verifyAgainstDummyHash,
 	verifyPassword,
@@ -29,20 +27,22 @@ import { logger } from "@/packages/utils/logger";
 
 const repo = () => getAuthRepository();
 
-import { recordAudit } from "../audit.service";
-import type { AuthTokens, DeviceInfo, SessionTokens } from "../auth.types";
+import { recordAudit } from "@/app/auth/core/audit.service";
+import type { DeviceInfo, SessionTokens } from "@/app/auth/core/auth.types";
 import {
-	notifyNewDevice,
 	notifyPasswordChanged,
 	sendResetLink,
 	sendVerificationLink,
-} from "../auth-mail";
-import { issueEmailToken } from "../email-tokens";
+} from "@/app/auth/core/auth-mail";
+import { issueEmailToken } from "@/app/auth/core/email-tokens";
+import {
+	buildSession,
+	isBlocked,
+	issueTokens,
+	startSession,
+} from "@/app/auth/core/session.service";
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
-
-const isBlocked = (user: User): boolean =>
-	user.status === "SUSPENDED" || user.status === "DEACTIVATED";
 
 // One message for unknown email, wrong password AND locked account. Distinct messages would let
 // anyone probe which emails are registered or which accounts are currently locked.
@@ -50,50 +50,6 @@ const invalidCredentials = (): AppError =>
 	AppError.unauthorized(
 		"Invalid email or password, or the account is temporarily locked after repeated failures",
 	);
-
-const buildSession = (
-	userId: string,
-	device: DeviceInfo,
-	ttlSeconds: number,
-	refreshTokenId: string,
-	now: Date,
-): UserSession => ({
-	id: crypto.randomUUID(),
-	userId,
-	deviceName: device.deviceName,
-	platform: device.platform,
-	browser: device.browser,
-	os: device.os,
-	ipAddress: device.ipAddress,
-	userAgent: device.userAgent,
-	refreshTokenId,
-	previousRefreshTokenId: null,
-	refreshRotatedAt: null,
-	lastSeenAt: now,
-	expiresAt: new Date(now.getTime() + ttlSeconds * 1_000),
-	createdAt: now,
-});
-
-const issueTokens = async (
-	user: User,
-	session: UserSession,
-	refreshTokenId: string,
-): Promise<AuthTokens> => {
-	const [accessToken, refreshToken] = await Promise.all([
-		signAccessToken({
-			userId: user.id,
-			email: user.email,
-			role: user.role,
-			sessionId: session.id,
-		}),
-		signRefreshToken(
-			{ userId: user.id, sessionId: session.id, tokenId: refreshTokenId },
-			session.expiresAt,
-		),
-	]);
-
-	return { accessToken, refreshToken };
-};
 
 // ── Email delivery ─────────────────────────────────────────────────────────────
 
@@ -291,42 +247,9 @@ export const signIn = async (
 		throw AppError.forbidden("Please verify your email address before signing in");
 	}
 
-	const now = new Date();
-	const refreshTokenId = crypto.randomUUID();
-	const ttl = input.remember
-		? authConfig.longSessionTtlSeconds
-		: authConfig.shortSessionTtlSeconds;
+	const login = await startSession(user, device, { remember: Boolean(input.remember) });
 
-	// Looked up BEFORE this sign-in is recorded, so it can only match earlier ones.
-	const history = await repo().getDeviceHistory(
-		user.id,
-		device.deviceName,
-		new Date(now.getTime() - authConfig.newDeviceWindowSeconds * 1_000),
-	);
-
-	await repo().deleteExpiredSessionsForUser(user.id);
-	const session = await repo().createSession(
-		buildSession(user.id, device, ttl, refreshTokenId, now),
-	);
-	await repo().trimSessionsForUser(user.id, authConfig.maxSessionsPerUser);
-
-	await recordAudit({
-		event: AuditEvents.SIGN_IN_SUCCESS,
-		userId: user.id,
-		device,
-		metadata: { remember: Boolean(input.remember) },
-	});
-
-	// Only for confirmed addresses (an unverified one may belong to someone else), and only when
-	// the account has a sign-in history, so accounts that predate the trail are not all flagged.
-	if (history.hasHistory && !history.knownDevice && user.emailVerifiedAt) {
-		await notifyNewDevice(user, device);
-	}
-
-	return {
-		user,
-		login: { tokens: await issueTokens(user, session, refreshTokenId), session },
-	};
+	return { user, login };
 };
 
 // ── Refresh ────────────────────────────────────────────────────────────────────

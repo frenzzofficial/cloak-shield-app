@@ -1,13 +1,13 @@
+import { recordAudit } from "@/app/auth/core/audit.service";
+import type { DeviceInfo } from "@/app/auth/core/auth.types";
+import { notifyAccountDeleted } from "@/app/auth/core/auth-mail";
+import { type AuthContext, requirePassword } from "@/app/auth/core/reauth";
 import { AuditEvents } from "@/packages/configs/audit.config";
 import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
 import type { UpdatePreferencesBody, UpdateProfileBody } from "@/packages/schema/account.schemas";
 import type { User, UserPreferences, UserProfile } from "@/packages/schema/user.schema";
 import { isUniqueViolation } from "@/packages/utils/db-errors";
 import { AppError } from "@/packages/utils/errors";
-import { recordAudit } from "../auth/audit.service";
-import type { DeviceInfo } from "../auth/auth.types";
-import { notifyAccountDeleted } from "../auth/auth-mail";
-import { type AuthContext, requirePassword } from "../auth/email/security.services";
 
 const repo = () => getAuthRepository();
 

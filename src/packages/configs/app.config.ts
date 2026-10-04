@@ -50,6 +50,7 @@ export const appConfig = {
 	auth: {
 		base: "/auth",
 		csrfToken: `${base}/csrf`,
+		providers: `${base}/auth/providers`,
 		authEmail: {
 			...authRoutes("/auth/email"),
 			signout: "/signout",

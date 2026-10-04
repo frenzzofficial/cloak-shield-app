@@ -1,7 +1,6 @@
 import type { Elysia } from "elysia";
-
+import type { AuthCore } from "@/app/auth/core/plugin";
 import { appConfig } from "@/packages/configs/app.config";
-import { envAppConfig } from "@/packages/env/app.env";
 import {
 	ACCESS_COOKIE,
 	authenticate,
@@ -27,13 +26,6 @@ import {
 	verifyEmailSchema,
 } from "@/packages/schema/auth.schemas";
 import type { AuditLogRecord, User, UserSession } from "@/packages/schema/user.schema";
-import {
-	clearAuthCookies,
-	readRefreshToken,
-	setAuthCookies,
-	wantsTokensInBody,
-} from "../auth-cookies";
-import { extractDeviceInfo } from "../device";
 import {
 	forgotPassword,
 	getMe,
@@ -100,8 +92,8 @@ const publicActivity = (entry: AuditLogRecord) => ({
 });
 
 // Mounted under the versioned API base, e.g. /api/v1/auth/email/signin.
-export const registerEmailAuthRoutes = (app: Elysia): void => {
-	if (!envAppConfig.ENABLE_EMAIL_AUTH) return;
+export const registerEmailAuthRoutes = (app: Elysia, core: AuthCore): void => {
+	const { cookies, device } = core;
 
 	// ── Public routes ────────────────────────────────────────────────────────────
 	app.group(route.path, (auth) =>
@@ -109,7 +101,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.signup,
 				async ({ body, cookie, request, server, status }) => {
-					const { user, login } = await signUp(body, extractDeviceInfo(request, server));
+					const { user, login } = await signUp(body, device.extract(request, server));
 
 					if (!login) {
 						return status(201, {
@@ -121,14 +113,14 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 						});
 					}
 
-					setAuthCookies(cookie, login.tokens, login.session.expiresAt);
+					cookies.set(cookie, login.tokens, login.session.expiresAt);
 
 					return status(201, {
 						success: true,
 						message: "Sign up successful",
 						requiresVerification: false,
 						user: publicUser(user),
-						...(wantsTokensInBody(request) ? { tokens: login.tokens } : {}),
+						...(cookies.wantsTokensInBody(request) ? { tokens: login.tokens } : {}),
 					});
 				},
 				{
@@ -143,15 +135,15 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.signin,
 				async ({ body, cookie, request, server, status }) => {
-					const { user, login } = await signIn(body, extractDeviceInfo(request, server));
+					const { user, login } = await signIn(body, device.extract(request, server));
 
-					setAuthCookies(cookie, login.tokens, login.session.expiresAt);
+					cookies.set(cookie, login.tokens, login.session.expiresAt);
 
 					return status(200, {
 						success: true,
 						message: "Logged in successfully",
 						user: publicUser(user),
-						...(wantsTokensInBody(request) ? { tokens: login.tokens } : {}),
+						...(cookies.wantsTokensInBody(request) ? { tokens: login.tokens } : {}),
 					});
 				},
 				{
@@ -163,7 +155,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.refresh,
 				async ({ body, cookie, request, server, status }) => {
-					const token = readRefreshToken(cookie, body);
+					const token = cookies.readRefreshToken(cookie, body);
 
 					if (!token) {
 						return status(401, {
@@ -174,14 +166,14 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 
 					const { tokens, session } = await refresh(
 						token,
-						extractDeviceInfo(request, server),
+						device.extract(request, server),
 					);
-					setAuthCookies(cookie, tokens, session.expiresAt);
+					cookies.set(cookie, tokens, session.expiresAt);
 
 					return status(200, {
 						success: true,
 						message: "Refreshed successfully",
-						...(wantsTokensInBody(request) ? { tokens } : {}),
+						...(cookies.wantsTokensInBody(request) ? { tokens } : {}),
 					});
 				},
 				{
@@ -197,15 +189,15 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 				async ({ body, cookie, headers, request, server, status }) => {
 					await signOut(
 						{
-							refreshToken: readRefreshToken(cookie, body),
+							refreshToken: cookies.readRefreshToken(cookie, body),
 							accessToken: extractAccessToken(
 								headers.authorization,
 								cookie[ACCESS_COOKIE]?.value,
 							),
 						},
-						extractDeviceInfo(request, server),
+						device.extract(request, server),
 					);
-					clearAuthCookies(cookie);
+					cookies.clear(cookie);
 
 					return status(200, { success: true, message: "Logged out successfully" });
 				},
@@ -219,7 +211,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.verifyEmail,
 				async ({ body, request, server, status }) => {
-					await verifyEmail(body, extractDeviceInfo(request, server));
+					await verifyEmail(body, device.extract(request, server));
 					return status(200, { success: true, message: "Email verified" });
 				},
 				{
@@ -249,7 +241,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.forgotPassword,
 				async ({ body, request, server, status }) => {
-					await forgotPassword(body, extractDeviceInfo(request, server));
+					await forgotPassword(body, device.extract(request, server));
 					return status(202, {
 						success: true,
 						message: "If that address has an account, a reset link is on its way.",
@@ -267,7 +259,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.resetPassword,
 				async ({ body, request, server, status }) => {
-					await resetPassword(body, extractDeviceInfo(request, server));
+					await resetPassword(body, device.extract(request, server));
 					return status(200, {
 						success: true,
 						message: "Password updated. Please sign in again.",
@@ -285,9 +277,9 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.confirmEmailChange,
 				async ({ body, cookie, request, server, status }) => {
-					await confirmEmailChange(body, extractDeviceInfo(request, server));
+					await confirmEmailChange(body, device.extract(request, server));
 					// Every session of the account was ended; drop this browser's cookies too.
-					clearAuthCookies(cookie);
+					cookies.clear(cookie);
 					return status(200, {
 						success: true,
 						message: "Email address updated. Please sign in with the new address.",
@@ -342,7 +334,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 				async ({ user, request, server, status }) => {
 					const { revokedSessions } = await revokeOtherSessions(
 						user,
-						extractDeviceInfo(request, server),
+						device.extract(request, server),
 					);
 					return status(200, {
 						success: true,
@@ -364,9 +356,9 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 					const { revokedCurrent } = await revokeSession(
 						user,
 						params.id,
-						extractDeviceInfo(request, server),
+						device.extract(request, server),
 					);
-					if (revokedCurrent) clearAuthCookies(cookie);
+					if (revokedCurrent) cookies.clear(cookie);
 					return status(200, { success: true, message: "Session revoked" });
 				},
 				{
@@ -381,7 +373,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 					const { revokedSessions } = await changePassword(
 						user,
 						body,
-						extractDeviceInfo(request, server),
+						device.extract(request, server),
 					);
 					return status(200, {
 						success: true,
@@ -401,7 +393,7 @@ export const registerEmailAuthRoutes = (app: Elysia): void => {
 			.post(
 				route.changeEmail,
 				async ({ user, body, request, server, status }) => {
-					await changeEmail(user, body, extractDeviceInfo(request, server));
+					await changeEmail(user, body, device.extract(request, server));
 					return status(202, {
 						success: true,
 						message:

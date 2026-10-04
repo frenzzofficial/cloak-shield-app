@@ -7,7 +7,16 @@
 		"types": "off"
 	},
 	"drizzle": false,
-	"ignore": ["src/packages/schema/common.schema.ts"],
+	"ignore": [
+		"src/packages/schema/common.schema.ts",
+		"src/app/auth/google/google.routes.ts",
+		"src/app/auth/google/google.services.ts",
+		"src/app/auth/discord/discord.routes.ts",
+		"src/app/auth/discord/discord.services.ts",
+		"src/app/auth/phone/phone.routes.ts",
+		"src/app/auth/phone/phone.services.ts",
+		"src/packages/configs/email.config.ts"
+	],
 	"ignoreIssues": {
 		"src/packages/configs/**": ["exports", "types"],
 		"src/packages/schema/**": ["exports", "types"]

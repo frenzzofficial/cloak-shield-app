@@ -2,7 +2,8 @@ import type { Elysia } from "elysia";
 
 import { registerOpenApi } from "@/packages/middlewares/openapi";
 import { registerAccountRoutes } from "./account/account.routes";
-import { registerEmailAuthRoutes } from "./auth/email/email.routes";
+import type { AuthPlugin } from "./auth/core/plugin";
+import { registerAuthPlugins } from "./auth/plugins";
 import { registerHealthRoutes } from "./health/health.routes";
 import { registerApiRoutes } from "./register-api-routes";
 import { registerStaticRoutes } from "./static/static.routes";
@@ -28,7 +29,16 @@ export const registerBootstrap = (app: Elysia): void => {
 	// ── Versioned API routes ──────────────────────────────────────────────────────────────
 	registerApiRoutes(app);
 
-	registerEmailAuthRoutes(app);
+	registerIdentityRoutes(app);
+};
 
-	registerAccountRoutes(app);
+/**
+ * Sign-in methods and everything that needs a signed-in user. Split out so "account routes exist
+ * only when at least one way to sign in does" can be tested without touching process.env.
+ */
+export const registerIdentityRoutes = (app: Elysia, plugins?: readonly AuthPlugin[]): void => {
+	const providers = registerAuthPlugins(app, plugins);
+
+	// Profile, preferences and deletion need at least one way to sign in.
+	if (providers.length > 0) registerAccountRoutes(app);
 };

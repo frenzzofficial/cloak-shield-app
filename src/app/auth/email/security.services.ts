@@ -1,3 +1,13 @@
+import { recordAudit } from "@/app/auth/core/audit.service";
+import type { DeviceInfo } from "@/app/auth/core/auth.types";
+import {
+	notifyEmailChanged,
+	notifyEmailChangeRequested,
+	notifyPasswordChanged,
+	sendEmailChangeLink,
+} from "@/app/auth/core/auth-mail";
+import { issueEmailToken } from "@/app/auth/core/email-tokens";
+import { type AuthContext, requirePassword } from "@/app/auth/core/reauth";
 import { AuditEvents } from "@/packages/configs/audit.config";
 import { authConfig } from "@/packages/configs/auth.config";
 import { AuthTokenTypes } from "@/packages/configs/auth-token.config";
@@ -8,82 +18,15 @@ import type {
 	ChangePasswordBody,
 	ConfirmEmailChangeBody,
 } from "@/packages/schema/auth.schemas";
-import type { AuditLogRecord, User } from "@/packages/schema/user.schema";
-import { hashOpaqueToken, hashPassword, verifyPassword } from "@/packages/utils/auth";
+import type { AuditLogRecord } from "@/packages/schema/user.schema";
+import { hashOpaqueToken, hashPassword } from "@/packages/utils/auth";
 import { isUniqueViolation } from "@/packages/utils/db-errors";
 import { AppError } from "@/packages/utils/errors";
-import { recordAudit } from "../audit.service";
-import type { DeviceInfo } from "../auth.types";
-import {
-	notifyEmailChanged,
-	notifyEmailChangeRequested,
-	notifyPasswordChanged,
-	sendEmailChangeLink,
-} from "../auth-mail";
-import { issueEmailToken } from "../email-tokens";
 
 // Actions that need the CURRENT password again (change password / email, delete account) plus
 // session control and the activity feed. Everything here acts on an already signed-in user.
 
 const repo = () => getAuthRepository();
-
-export interface AuthContext {
-	userId: string;
-	sessionId: string;
-}
-
-/**
- * Re-authentication. The password check feeds the SAME failed-attempt counter as sign-in: if
- * it did not, a stolen session could guess the password through these endpoints with no limit.
- */
-export const requirePassword = async (
-	userId: string,
-	password: string,
-	device: DeviceInfo,
-	action: string,
-): Promise<User> => {
-	const [user, security] = await Promise.all([
-		repo().findUserById(userId),
-		repo().getUserSecurity(userId),
-	]);
-	if (!user || !security) throw AppError.unauthorized("Account not found");
-
-	if (security.lockedUntil && security.lockedUntil.getTime() > Date.now()) {
-		throw AppError.tooManyRequests("Too many failed attempts. Try again later.");
-	}
-
-	if (!(await verifyPassword(password, security.passwordHash))) {
-		const updated = await repo().registerFailedLogin(
-			userId,
-			authConfig.maxFailedLogins,
-			authConfig.lockoutSeconds,
-		);
-		await recordAudit({
-			event: AuditEvents.REAUTH_FAILURE,
-			outcome: "FAILURE",
-			userId,
-			device,
-			metadata: { action },
-		});
-
-		if (updated?.failedLoginAttempts === authConfig.maxFailedLogins) {
-			await recordAudit({
-				event: AuditEvents.ACCOUNT_LOCKED,
-				outcome: "FAILURE",
-				userId,
-				device,
-				metadata: { lockSeconds: authConfig.lockoutSeconds },
-			});
-		}
-		throw AppError.forbidden("Current password is incorrect");
-	}
-
-	if (security.failedLoginAttempts > 0 || security.lockedUntil) {
-		await repo().updateUserSecurity(userId, { failedLoginAttempts: 0, lockedUntil: null });
-	}
-
-	return user;
-};
 
 // ── Change password ────────────────────────────────────────────────────────────
 

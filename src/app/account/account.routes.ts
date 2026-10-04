@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
-
+import { clearAuthCookies } from "@/app/auth/core/auth-cookies";
+import { extractDeviceInfo } from "@/app/auth/core/device";
 import { appConfig } from "@/packages/configs/app.config";
-import { envAppConfig } from "@/packages/env/app.env";
 import { authenticate } from "@/packages/middlewares/authenticate";
 import { accountActionLimiter } from "@/packages/middlewares/rate-limiter-auth";
 import {
@@ -10,8 +10,6 @@ import {
 } from "@/packages/schema/account.schemas";
 import { deleteAccountSchema } from "@/packages/schema/auth.schemas";
 import type { UserPreferences, UserProfile } from "@/packages/schema/user.schema";
-import { clearAuthCookies } from "../auth/auth-cookies";
-import { extractDeviceInfo } from "../auth/device";
 import {
 	type Account,
 	deleteAccount,
@@ -69,8 +67,6 @@ const publicAccount = ({ user, profile, preferences }: Account) => ({
 
 // Mounted at e.g. /api/v1/account/profile. Everything here needs a signed-in user.
 export const registerAccountRoutes = (app: Elysia): void => {
-	if (!envAppConfig.ENABLE_EMAIL_AUTH) return;
-
 	app.group(route.path, (account) =>
 		account
 			.use(authenticate)
