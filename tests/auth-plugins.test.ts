@@ -6,14 +6,14 @@ import {
 	type AuthPlugin,
 	createAuthCore,
 	mountAuthPlugins,
-} from "@/app/auth/core/plugin";
-import { registerAuthPlugins } from "@/app/auth/plugins";
-import { createApp } from "@/app/main";
-import { registerIdentityRoutes } from "@/app/routes";
-import { registerErrorHandler } from "@/packages/middlewares/error-handler";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { User } from "@/packages/schema/user.schema";
-import { verifyAccessToken } from "@/packages/utils/auth";
+} from "../src/app/auth/core/plugin";
+import { registerAuthPlugins } from "../src/app/auth/plugins";
+import { createApp } from "../src/app/main";
+import { registerIdentityRoutes } from "../src/app/routes";
+import { registerErrorHandler } from "../src/packages/middlewares/error-handler";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
+import type { User } from "../src/packages/schema/user.schema";
+import { verifyAccessToken } from "../src/packages/utils/auth";
 import { pick, TestClient } from "./helpers/http";
 import { InMemoryAuthRepository } from "./helpers/memory-repo";
 

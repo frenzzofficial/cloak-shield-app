@@ -9,21 +9,21 @@ import {
 	SignJWT,
 } from "jose";
 
-import { ProviderHttpError, postForm } from "@/packages/oauth/http";
-import { IdTokenError, verifyIdToken } from "@/packages/oauth/oidc";
+import { ProviderHttpError, postForm } from "../src/packages/oauth/http";
+import { IdTokenError, verifyIdToken } from "../src/packages/oauth/oidc";
 import {
 	codeChallengeS256,
 	generateCodeVerifier,
 	generateRandomToken,
-} from "@/packages/oauth/pkce";
-import { safeRedirectPath } from "@/packages/oauth/redirect";
+} from "../src/packages/oauth/pkce";
+import { safeRedirectPath } from "../src/packages/oauth/redirect";
 import {
 	type OAuthStatePayload,
 	safeEqual,
 	sealOAuthState,
 	unsealOAuthState,
-} from "@/packages/oauth/state";
-import { signAccessToken } from "@/packages/utils/auth";
+} from "../src/packages/oauth/state";
+import { signAccessToken } from "../src/packages/utils/auth";
 
 describe("PKCE", () => {
 	test("matches the RFC 7636 appendix B test vector", () => {

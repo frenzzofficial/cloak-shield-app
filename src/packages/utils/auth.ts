@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
-import { envAuthConfig } from "@/packages/env/auth.env";
+import { envAuthConfig } from "../env/auth.env";
 import { AppError } from "./errors";
 
 // ── Config ─────────────────────────────────────────────────────────────────────

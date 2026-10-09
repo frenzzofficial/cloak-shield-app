@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseEnv } from "@/packages/utils/parse-env";
+import { parseEnv } from "../utils/parse-env";
 
 // How outgoing email is delivered.
 //   auto    - Resend when RESEND_API_KEY is set; otherwise print to the log (development)

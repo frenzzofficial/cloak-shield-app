@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
 
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import { verifyAccessToken } from "@/packages/utils/auth";
-import { AppError } from "@/packages/utils/errors";
+import { getAuthRepository } from "../repository/drizzle/auth.repository";
+import { verifyAccessToken } from "../utils/auth";
+import { AppError } from "../utils/errors";
 
 export const ACCESS_COOKIE = "access_token";
 

@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import type { DeviceInfo } from "@/app/auth/core/auth.types";
-import { type ExternalIdentity, resolveExternalIdentity } from "@/app/auth/core/identity.service";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { OAuthAccountRecord } from "@/packages/schema/user.schema";
+import type { DeviceInfo } from "../src/app/auth/core/auth.types";
+import {
+	type ExternalIdentity,
+	resolveExternalIdentity,
+} from "../src/app/auth/core/identity.service";
+import type { OAuthProvider } from "../src/packages/configs/oauth-provider.config";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
+import type { OAuthAccountRecord } from "../src/packages/schema/user.schema";
 import { newEmail } from "./helpers/auth-flow";
 import { InMemoryAuthRepository } from "./helpers/memory-repo";
 

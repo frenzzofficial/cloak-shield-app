@@ -1,9 +1,9 @@
 import { z } from "zod";
-import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
-import type { AuthTokenType } from "@/packages/configs/auth-token.config";
-import { UserGenderValues } from "@/packages/configs/gender.config";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
-import { UserRolesValues, userStatusValues } from "@/packages/configs/roles.config";
+import type { AuditEvent, AuditOutcome } from "../configs/audit.config";
+import type { AuthTokenType } from "../configs/auth-token.config";
+import { UserGenderValues } from "../configs/gender.config";
+import type { OAuthProvider } from "../configs/oauth-provider.config";
+import { UserRolesValues, userStatusValues } from "../configs/roles.config";
 import {
 	confirmPasswordRules,
 	emailRules,
@@ -12,7 +12,7 @@ import {
 	phoneRules,
 	schemaMessages,
 	usernameRules,
-} from "@/packages/configs/schemas.config";
+} from "../configs/schemas.config";
 
 export const userSchema = z.object({
 	id: z.uuid(),

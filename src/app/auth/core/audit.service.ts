@@ -1,6 +1,6 @@
-import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import { bestEffort } from "@/packages/utils/best-effort";
+import type { AuditEvent, AuditOutcome } from "../../../packages/configs/audit.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import { bestEffort } from "../../../packages/utils/best-effort";
 import type { DeviceInfo } from "./auth.types";
 
 export interface AuditInput {

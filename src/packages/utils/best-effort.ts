@@ -1,4 +1,4 @@
-import { logger } from "@/packages/utils/logger";
+import { logger } from "./logger";
 
 /**
  * Runs a side effect (sending mail, writing an audit row) whose failure must never change the

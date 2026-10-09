@@ -1,4 +1,4 @@
-import type { UserSession } from "@/packages/schema/user.schema";
+import type { UserSession } from "../../../packages/schema/user.schema";
 
 /** Who is calling: parsed from the request, stored on sessions and in the audit trail. */
 export interface DeviceInfo {

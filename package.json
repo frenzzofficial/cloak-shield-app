@@ -7,6 +7,7 @@
 		"arch": "depcruise src --config .dependency-cruiser.cjs",
 		"build:check": "bun build src/index.ts --outdir dist --target bun",
 		"check": "bun run verify",
+		"check:deploy": "bun scripts/check-deploy.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
@@ -25,6 +26,9 @@
 		"type-coverage": "type-coverage --strict --at-least 100 --ignore-catch",
 		"typecheck": "tsc --noEmit",
 		"verify": "bun run typecheck && bun run lint:fix && bun run type-coverage && bun run spell && bun run test"
+	},
+	"dependencies": {
+		"@types/node": "^26.6.4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.14",

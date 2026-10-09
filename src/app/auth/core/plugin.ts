@@ -1,6 +1,6 @@
 import type { Elysia } from "elysia";
 
-import { appConfig } from "@/packages/configs/app.config";
+import { appConfig } from "../../../packages/configs/app.config";
 import { recordAudit } from "./audit.service";
 import {
 	clearAuthCookies,

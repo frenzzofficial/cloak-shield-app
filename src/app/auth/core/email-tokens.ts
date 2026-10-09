@@ -1,6 +1,6 @@
-import type { AuthTokenType } from "@/packages/configs/auth-token.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import { generateOpaqueToken, hashOpaqueToken } from "@/packages/utils/auth";
+import type { AuthTokenType } from "../../../packages/configs/auth-token.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import { generateOpaqueToken, hashOpaqueToken } from "../../../packages/utils/auth";
 
 /**
  * Creates a single-use link token and returns the raw value (to put in the email). Only its

@@ -1,17 +1,16 @@
 import type { Elysia } from "elysia";
-import type { AuthCore } from "@/app/auth/core/plugin";
-import { appConfig } from "@/packages/configs/app.config";
+import { appConfig } from "../../../packages/configs/app.config";
 import {
 	ACCESS_COOKIE,
 	authenticate,
 	extractAccessToken,
-} from "@/packages/middlewares/authenticate";
+} from "../../../packages/middlewares/authenticate";
 import {
 	accountActionLimiter,
 	credentialsLimiter,
 	emailActionLimiter,
 	refreshLimiter,
-} from "@/packages/middlewares/rate-limiter-auth";
+} from "../../../packages/middlewares/rate-limiter-auth";
 import {
 	activityQuerySchema,
 	changeEmailSchema,
@@ -24,8 +23,9 @@ import {
 	signInSchema,
 	signUpSchema,
 	verifyEmailSchema,
-} from "@/packages/schema/auth.schemas";
-import type { AuditLogRecord, User, UserSession } from "@/packages/schema/user.schema";
+} from "../../../packages/schema/auth.schemas";
+import type { AuditLogRecord, User, UserSession } from "../../../packages/schema/user.schema";
+import type { AuthCore } from "../core/plugin";
 import {
 	forgotPassword,
 	getMe,

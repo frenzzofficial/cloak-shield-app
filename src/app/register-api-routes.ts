@@ -1,8 +1,8 @@
 import type { Elysia } from "elysia";
 
-import { appConfig } from "@/packages/configs/app.config";
-import { envAppConfig } from "@/packages/env/app.env";
-import { CSRF_COOKIE_NAME } from "@/packages/middlewares/csrf";
+import { appConfig } from "../packages/configs/app.config";
+import { envAppConfig } from "../packages/env/app.env";
+import { CSRF_COOKIE_NAME } from "../packages/middlewares/csrf";
 
 // Every versioned route is registered under a single `.group()`, e.g. /api/v1/... .
 // Root-level routes that shouldn't be versioned (/, /health) stay outside this group —

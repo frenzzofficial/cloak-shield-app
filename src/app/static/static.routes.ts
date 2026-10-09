@@ -1,5 +1,5 @@
 import type { Elysia } from "elysia";
-import { getHTML, getStaticAsset } from "@/packages/utils/static-files";
+import { getHTML, getStaticAsset } from "../../packages/utils/static-files";
 
 const STATIC_PAGES = new Map<string, string>([
 	["/", "html/index.html"],

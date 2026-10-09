@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { getClientIp } from "@/packages/utils/client-ip";
+import { getClientIp } from "../src/packages/utils/client-ip";
 
 const req = (headers: Record<string, string>) => new Request("http://localhost/", { headers });
 

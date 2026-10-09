@@ -1,4 +1,4 @@
-import { envAppConfig } from "@/packages/env/app.env";
+import { envAppConfig } from "../env/app.env";
 
 type LogLevel = "error" | "warn" | "info" | "debug";
 

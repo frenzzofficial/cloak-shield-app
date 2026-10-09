@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
-import { AppError } from "@/packages/utils/errors";
-import { logger } from "@/packages/utils/logger";
+import { isUniqueViolation } from "../utils/db-errors";
+import { AppError } from "../utils/errors";
+import { logger } from "../utils/logger";
 
 interface FieldError {
 	field: string;

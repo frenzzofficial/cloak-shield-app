@@ -8,7 +8,7 @@ import {
 	passwordRules,
 	schemaMessages,
 	signInPasswordRules,
-} from "@/packages/configs/schemas.config";
+} from "../configs/schemas.config";
 
 // SCHEMA
 export const signUpSchema = z

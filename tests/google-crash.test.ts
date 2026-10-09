@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { emailPlugin } from "@/app/auth/email/email.plugin";
-import { createGooglePlugin } from "@/app/auth/google/google.plugin";
-import { createApp } from "@/app/main";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { OAuthAccountRecord } from "@/packages/schema/user.schema";
+import { emailPlugin } from "../src/app/auth/email/email.plugin";
+import { createGooglePlugin } from "../src/app/auth/google/google.plugin";
+import { createApp } from "../src/app/main";
+import type { OAuthProvider } from "../src/packages/configs/oauth-provider.config";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
+import type { OAuthAccountRecord } from "../src/packages/schema/user.schema";
 import { newEmail } from "./helpers/auth-flow";
 import { FakeGoogle } from "./helpers/fake-google";
 import { TestClient } from "./helpers/http";

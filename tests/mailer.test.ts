@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseMailEnv } from "@/packages/env/mail.env";
-import { getMailer, setMailer } from "@/packages/mailer/mailer";
-import { createResendMailer, type FetchLike } from "@/packages/mailer/resend";
+import { parseMailEnv } from "../src/packages/env/mail.env";
+import { getMailer, setMailer } from "../src/packages/mailer/mailer";
+import { createResendMailer, type FetchLike } from "../src/packages/mailer/resend";
 import {
 	accountDeletedTemplate,
 	clientLink,
@@ -11,7 +11,7 @@ import {
 	maskEmail,
 	newDeviceTemplate,
 	passwordChangedTemplate,
-} from "@/packages/mailer/templates";
+} from "../src/packages/mailer/templates";
 
 interface Captured {
 	url: string;

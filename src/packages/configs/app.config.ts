@@ -1,6 +1,6 @@
-import { envAppConfig } from "@/packages/env/app.env";
-import { envClientConfig } from "@/packages/env/client.env";
-import { envPublicConfig } from "@/packages/env/public.env";
+import { envAppConfig } from "../env/app.env";
+import { envClientConfig } from "../env/client.env";
+import { envPublicConfig } from "../env/public.env";
 
 const base = `${envAppConfig.API_PREFIX}/${envAppConfig.API_VERSION}`;
 

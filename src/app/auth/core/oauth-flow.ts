@@ -1,9 +1,9 @@
 import type { Context } from "elysia";
 
-import { authConfig } from "@/packages/configs/auth.config";
-import { envClientConfig } from "@/packages/env/client.env";
-import { envOAuthConfig } from "@/packages/env/oauth.env";
-import { STATE_TTL_SECONDS } from "@/packages/oauth/state";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { envClientConfig } from "../../../packages/env/client.env";
+import { envOAuthConfig } from "../../../packages/env/oauth.env";
+import { STATE_TTL_SECONDS } from "../../../packages/oauth/state";
 import type { RefusalReason } from "./identity.service";
 
 // What every provider plugin (Google now, Discord later) needs around the redirect dance, so each

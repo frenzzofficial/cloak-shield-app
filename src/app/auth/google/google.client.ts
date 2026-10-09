@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { type FetchLike, postForm } from "@/packages/oauth/http";
+import { type FetchLike, postForm } from "../../../packages/oauth/http";
 
 // Everything that is specific to Google's endpoints. Nothing here touches accounts or sessions.
 

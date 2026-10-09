@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createApp } from "@/app/main";
+import { createApp } from "../src/app/main";
 import { pick, TestClient } from "./helpers/http";
 
 const client = new TestClient(createApp());

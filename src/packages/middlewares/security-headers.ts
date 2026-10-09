@@ -1,6 +1,6 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "@/packages/env/app.env";
+import { envAppConfig } from "../env/app.env";
 
 // Sets standard security response headers (CSP, X-Frame-Options, HSTS, Referrer-Policy,
 // Permissions-Policy, ...). This is a JSON API, not an HTML app, so the CSP is locked

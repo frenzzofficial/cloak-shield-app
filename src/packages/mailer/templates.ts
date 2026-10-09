@@ -1,5 +1,5 @@
-import { envClientConfig } from "@/packages/env/client.env";
-import { envPublicConfig } from "@/packages/env/public.env";
+import { envClientConfig } from "../env/client.env";
+import { envPublicConfig } from "../env/public.env";
 import type { MailMessage } from "./mailer";
 
 type Template = Pick<MailMessage, "subject" | "text">;

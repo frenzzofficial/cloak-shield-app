@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseEnv } from "@/packages/utils/parse-env";
+import { parseEnv } from "../utils/parse-env";
 
 // Settings for "Sign in with <provider>". Everything here is optional until a provider is switched
 // on: a deployment that does not use Google needs none of it.

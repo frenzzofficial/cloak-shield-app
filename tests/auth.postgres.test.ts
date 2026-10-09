@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 
-import { db } from "@/packages/db/client";
-import { auditLogs, userSessions } from "@/packages/db/schema";
+import { db } from "../src/packages/db/client";
+import { auditLogs, userSessions } from "../src/packages/db/schema";
 import {
 	getAuthRepository,
 	setAuthRepository,
-} from "@/packages/repository/drizzle/auth.repository";
+} from "../src/packages/repository/drizzle/auth.repository";
 import { defineAccountFlowTests } from "./helpers/account-flow";
 import { defineAuthFlowTests } from "./helpers/auth-flow";
 import { defineGoogleFlowTests } from "./helpers/google-flow";

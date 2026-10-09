@@ -1,8 +1,8 @@
-import { AuditEvents } from "@/packages/configs/audit.config";
-import { authConfig } from "@/packages/configs/auth.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { User, UserSession } from "@/packages/schema/user.schema";
-import { signAccessToken, signRefreshToken } from "@/packages/utils/auth";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import type { User, UserSession } from "../../../packages/schema/user.schema";
+import { signAccessToken, signRefreshToken } from "../../../packages/utils/auth";
 import { recordAudit } from "./audit.service";
 import type { AuthTokens, DeviceInfo, SessionTokens } from "./auth.types";
 import { notifyNewDevice } from "./auth-mail";

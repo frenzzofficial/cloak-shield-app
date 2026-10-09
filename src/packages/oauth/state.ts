@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
-import { envAuthConfig } from "@/packages/env/auth.env";
+import { envAuthConfig } from "../env/auth.env";
 
 // The state that must survive the round trip to the provider and back: which flow this is, the
 // anti-CSRF `state`, the OIDC `nonce`, the PKCE verifier, and where to send the user afterwards.

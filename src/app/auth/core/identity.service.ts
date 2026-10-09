@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { AuditEvents } from "@/packages/configs/audit.config";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
-import { fullnameRules } from "@/packages/configs/schemas.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { OAuthAccountRecord, User } from "@/packages/schema/user.schema";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
-import { AppError } from "@/packages/utils/errors";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import type { OAuthProvider } from "../../../packages/configs/oauth-provider.config";
+import { fullnameRules } from "../../../packages/configs/schemas.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import type { OAuthAccountRecord, User } from "../../../packages/schema/user.schema";
+import { isUniqueViolation } from "../../../packages/utils/db-errors";
+import { AppError } from "../../../packages/utils/errors";
 import { newPreferences, newProfile, newSecurity } from "./account-defaults";
 import { recordAudit } from "./audit.service";
 import type { DeviceInfo } from "./auth.types";

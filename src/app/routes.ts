@@ -1,6 +1,6 @@
 import type { Elysia } from "elysia";
 
-import { registerOpenApi } from "@/packages/middlewares/openapi";
+import { registerOpenApi } from "../packages/middlewares/openapi";
 import { registerAccountRoutes } from "./account/account.routes";
 import type { AuthPlugin } from "./auth/core/plugin";
 import { registerAuthPlugins } from "./auth/plugins";

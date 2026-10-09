@@ -1,5 +1,5 @@
-import type { AuthTokenType } from "@/packages/configs/auth-token.config";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
+import type { AuthTokenType } from "../packages/configs/auth-token.config";
+import type { OAuthProvider } from "../packages/configs/oauth-provider.config";
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
@@ -9,7 +9,7 @@ import type {
 	UserProfile,
 	UserSecurity,
 	UserSession,
-} from "@/packages/schema/user.schema";
+} from "../packages/schema/user.schema";
 
 export interface Repository {
 	// ── Core user ────────────────────────────────────────────────────────────────

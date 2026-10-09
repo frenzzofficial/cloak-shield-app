@@ -1,6 +1,6 @@
 import { type JWTVerifyGetKey, jwtVerify } from "jose";
 
-import { logger } from "@/packages/utils/logger";
+import { logger } from "../utils/logger";
 import { safeEqual } from "./state";
 
 // Verifying an OpenID Connect ID token. The checks that matter, and what each one stops:

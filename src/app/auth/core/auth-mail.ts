@@ -1,5 +1,8 @@
-import { type OAuthProvider, OAuthProviderLabels } from "@/packages/configs/oauth-provider.config";
-import { getMailer } from "@/packages/mailer/mailer";
+import {
+	type OAuthProvider,
+	OAuthProviderLabels,
+} from "../../../packages/configs/oauth-provider.config";
+import { getMailer } from "../../../packages/mailer/mailer";
 import {
 	accountDeletedTemplate,
 	clientLink,
@@ -12,9 +15,9 @@ import {
 	providerLinkedTemplate,
 	resetPasswordTemplate,
 	verifyEmailTemplate,
-} from "@/packages/mailer/templates";
-import type { User } from "@/packages/schema/user.schema";
-import { bestEffort } from "@/packages/utils/best-effort";
+} from "../../../packages/mailer/templates";
+import type { User } from "../../../packages/schema/user.schema";
+import { bestEffort } from "../../../packages/utils/best-effort";
 import type { DeviceInfo } from "./auth.types";
 
 // Every message goes through here so that a mail failure is logged and never reaches the caller.

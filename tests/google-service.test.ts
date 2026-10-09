@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createLocalJWKSet } from "jose";
 
-import { startGoogleLogin } from "@/app/auth/google/google.services";
-import { unsealOAuthState } from "@/packages/oauth/state";
+import { startGoogleLogin } from "../src/app/auth/google/google.services";
+import { unsealOAuthState } from "../src/packages/oauth/state";
 
 // The callback re-checks the redirect, so a broken sanitizer at START would be invisible in the
 // end-to-end flow. Each layer is tested on its own, so one cannot quietly cover for the other.

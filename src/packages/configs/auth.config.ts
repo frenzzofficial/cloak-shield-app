@@ -1,4 +1,4 @@
-import { envAuthConfig } from "@/packages/env/auth.env";
+import { envAuthConfig } from "../env/auth.env";
 
 // Auth behavior in one place. Values come from validated env (see env/auth.env.ts).
 // The object is intentionally NOT frozen: tests flip `requireEmailVerification` to cover

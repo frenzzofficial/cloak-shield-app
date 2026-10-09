@@ -59,6 +59,17 @@
 				"noEvolvingTypes": "error"
 			},
 			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": ["@/*"],
+								"message": "Use a relative import: the deployed function does not resolve tsconfig paths."
+							}
+						]
+					}
+				},
 				"noNonNullAssertion": "error",
 				"useImportType": "error",
 				"useNodejsImportProtocol": "error",

@@ -1,15 +1,15 @@
 import type { Elysia } from "elysia";
-import { clearAuthCookies } from "@/app/auth/core/auth-cookies";
-import { extractDeviceInfo } from "@/app/auth/core/device";
-import { appConfig } from "@/packages/configs/app.config";
-import { authenticate } from "@/packages/middlewares/authenticate";
-import { accountActionLimiter } from "@/packages/middlewares/rate-limiter-auth";
+import { appConfig } from "../../packages/configs/app.config";
+import { authenticate } from "../../packages/middlewares/authenticate";
+import { accountActionLimiter } from "../../packages/middlewares/rate-limiter-auth";
 import {
 	updatePreferencesBodySchema,
 	updateProfileBodySchema,
-} from "@/packages/schema/account.schemas";
-import { deleteAccountSchema } from "@/packages/schema/auth.schemas";
-import type { UserPreferences, UserProfile } from "@/packages/schema/user.schema";
+} from "../../packages/schema/account.schemas";
+import { deleteAccountSchema } from "../../packages/schema/auth.schemas";
+import type { UserPreferences, UserProfile } from "../../packages/schema/user.schema";
+import { clearAuthCookies } from "../auth/core/auth-cookies";
+import { extractDeviceInfo } from "../auth/core/device";
 import {
 	type Account,
 	deleteAccount,

@@ -1,8 +1,8 @@
 import { cors } from "@elysiajs/cors";
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "@/packages/env/app.env";
-import { envClientConfig } from "@/packages/env/client.env";
+import { envAppConfig } from "../env/app.env";
+import { envClientConfig } from "../env/client.env";
 
 // Allowlists CLIENT_ORIGINS (comma-separated in .env, already parsed + validated as URLs —
 // see env/client.env.ts). `credentials: true` because CSRF protection relies on a cookie

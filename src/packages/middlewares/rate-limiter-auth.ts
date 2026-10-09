@@ -1,6 +1,6 @@
-import { envAppConfig } from "@/packages/env/app.env";
-import { getClientIp } from "@/packages/utils/client-ip";
-import { AppError } from "@/packages/utils/errors";
+import { envAppConfig } from "../env/app.env";
+import { getClientIp } from "../utils/client-ip";
+import { AppError } from "../utils/errors";
 
 // Per-route rate limits for the sensitive auth endpoints. They are plain `beforeHandle`
 // functions (not plugins) so each route picks the limiter that fits it.

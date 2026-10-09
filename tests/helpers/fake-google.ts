@@ -8,9 +8,9 @@ import {
 	SignJWT,
 } from "jose";
 
-import { GOOGLE_AUTH_URL, GOOGLE_TOKEN_URL } from "@/app/auth/google/google.client";
-import type { FetchLike } from "@/packages/oauth/http";
-import { codeChallengeS256 } from "@/packages/oauth/pkce";
+import { GOOGLE_AUTH_URL, GOOGLE_TOKEN_URL } from "../../src/app/auth/google/google.client";
+import type { FetchLike } from "../../src/packages/oauth/http";
+import { codeChallengeS256 } from "../../src/packages/oauth/pkce";
 
 // A stand-in for Google that behaves like the real one where it matters for security:
 //   - it REFUSES a malformed authorization request (so our /start is tested against Google's rules)

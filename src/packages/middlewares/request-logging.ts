@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "@/packages/env/app.env";
-import { logger } from "@/packages/utils/logger";
+import { envAppConfig } from "../env/app.env";
+import { logger } from "../utils/logger";
 
 // Logs one line per request: method, path, status and duration. Uses the same JSON logger
 // as everything else (utils/logger.ts), so these lines are structured the same way as

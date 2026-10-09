@@ -5,7 +5,7 @@ import {
 	resetPasswordSchema,
 	signInSchema,
 	signUpSchema,
-} from "@/packages/schema/auth.schemas";
+} from "../src/packages/schema/auth.schemas";
 
 const base = { email: "ann@example.com", password: "Correct-Horse-9-Battery!" };
 

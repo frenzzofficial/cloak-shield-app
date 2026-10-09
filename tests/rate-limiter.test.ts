@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { createRateLimiter, type RateLimitContext } from "@/packages/middlewares/rate-limiter-auth";
-import { AppError } from "@/packages/utils/errors";
+import {
+	createRateLimiter,
+	type RateLimitContext,
+} from "../src/packages/middlewares/rate-limiter-auth";
+import { AppError } from "../src/packages/utils/errors";
 
 const context = (headers: Record<string, string> = {}): RateLimitContext => ({
 	request: new Request("http://localhost/", { headers }),

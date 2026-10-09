@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { limitRules, pageRules, uuidRules } from "@/packages/configs/schemas.config";
+import { limitRules, pageRules, uuidRules } from "../configs/schemas.config";
 
 /**
  * common.schema.ts

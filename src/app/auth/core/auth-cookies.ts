@@ -1,8 +1,8 @@
 import type { Context } from "elysia";
 
-import { appConfig } from "@/packages/configs/app.config";
-import { authConfig } from "@/packages/configs/auth.config";
-import { ACCESS_COOKIE } from "@/packages/middlewares/authenticate";
+import { appConfig } from "../../../packages/configs/app.config";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { ACCESS_COOKIE } from "../../../packages/middlewares/authenticate";
 
 const REFRESH_COOKIE = "refresh_token";
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { UserGenderValues } from "@/packages/configs/gender.config";
-import { fullnameRules, phoneRules, usernameRules } from "@/packages/configs/schemas.config";
+import { UserGenderValues } from "../configs/gender.config";
+import { fullnameRules, phoneRules, usernameRules } from "../configs/schemas.config";
 
 const isTimeZone = (value: string): boolean => {
 	try {

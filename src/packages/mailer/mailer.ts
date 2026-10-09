@@ -1,5 +1,5 @@
-import { envMailConfig } from "@/packages/env/mail.env";
-import { logger } from "@/packages/utils/logger";
+import { envMailConfig } from "../env/mail.env";
+import { logger } from "../utils/logger";
 import { createResendMailer } from "./resend";
 
 export interface MailMessage {

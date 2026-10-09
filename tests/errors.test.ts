@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { createApp } from "@/app/main";
-import { AppError } from "@/packages/utils/errors";
+import { createApp } from "../src/app/main";
+import { AppError } from "../src/packages/utils/errors";
 import { pick, TestClient } from "./helpers/http";
 
 const app = createApp()

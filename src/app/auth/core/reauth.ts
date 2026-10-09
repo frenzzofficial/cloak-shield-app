@@ -1,9 +1,9 @@
-import { AuditEvents } from "@/packages/configs/audit.config";
-import { authConfig } from "@/packages/configs/auth.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { User } from "@/packages/schema/user.schema";
-import { verifyPassword } from "@/packages/utils/auth";
-import { AppError } from "@/packages/utils/errors";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import type { User } from "../../../packages/schema/user.schema";
+import { verifyPassword } from "../../../packages/utils/auth";
+import { AppError } from "../../../packages/utils/errors";
 import { recordAudit } from "./audit.service";
 import type { DeviceInfo } from "./auth.types";
 

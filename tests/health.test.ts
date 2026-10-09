@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { getHealthStatus } from "@/app/health/health.service";
+import { getHealthStatus } from "../src/app/health/health.service";
 
 describe("health check", () => {
 	test("is ok when the database answers", async () => {

@@ -1,9 +1,8 @@
 import type { Elysia } from "elysia";
-
-import type { AuthCore } from "@/app/auth/core/plugin";
-import { appConfig } from "@/packages/configs/app.config";
-import { oauthLimiter } from "@/packages/middlewares/rate-limiter-auth";
-import { logger } from "@/packages/utils/logger";
+import { appConfig } from "../../../packages/configs/app.config";
+import { oauthLimiter } from "../../../packages/middlewares/rate-limiter-auth";
+import { logger } from "../../../packages/utils/logger";
+import type { AuthCore } from "../core/plugin";
 import {
 	completeGoogleLogin,
 	GOOGLE_PROVIDER_KEY,

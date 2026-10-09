@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createApp } from "@/app/main";
-import { getMailer, type MailMessage, setMailer } from "@/packages/mailer/mailer";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { AuditLogRecord } from "@/packages/schema/user.schema";
+import { createApp } from "../src/app/main";
+import { getMailer, type MailMessage, setMailer } from "../src/packages/mailer/mailer";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
+import type { AuditLogRecord } from "../src/packages/schema/user.schema";
 import { BASE, newEmail, PASSWORD } from "./helpers/auth-flow";
 import { pick, TestClient } from "./helpers/http";
 import { InMemoryAuthRepository } from "./helpers/memory-repo";

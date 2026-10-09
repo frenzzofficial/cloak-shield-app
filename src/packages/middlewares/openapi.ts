@@ -1,8 +1,8 @@
 import { openapi } from "@elysiajs/openapi";
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "@/packages/env/app.env";
-import { envPublicConfig } from "@/packages/env/public.env";
+import { envAppConfig } from "../env/app.env";
+import { envPublicConfig } from "../env/public.env";
 
 // Auto-generates OpenAPI docs from route schemas and serves an interactive page.
 // Must be registered BEFORE the routes it should document — it can only pick up schemas

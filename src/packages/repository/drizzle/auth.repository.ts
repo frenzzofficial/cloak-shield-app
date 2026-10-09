@@ -1,8 +1,9 @@
 import { and, desc, eq, gt, inArray, isNull, lt, ne, sql } from "drizzle-orm";
-import { AuditEvents } from "@/packages/configs/audit.config";
-import type { AuthTokenType } from "@/packages/configs/auth-token.config";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
-import { db } from "@/packages/db/client";
+import type { Repository } from "../../../types/repository";
+import { AuditEvents } from "../../configs/audit.config";
+import type { AuthTokenType } from "../../configs/auth-token.config";
+import type { OAuthProvider } from "../../configs/oauth-provider.config";
+import { db } from "../../db/client";
 import {
 	auditLogs,
 	authTokens,
@@ -12,7 +13,7 @@ import {
 	userSecurity,
 	userSessions,
 	users,
-} from "@/packages/db/schema";
+} from "../../db/schema";
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
@@ -22,9 +23,8 @@ import type {
 	UserProfile,
 	UserSecurity,
 	UserSession,
-} from "@/packages/schema/user.schema";
-import { AppError } from "@/packages/utils/errors";
-import type { Repository } from "@/types/repository";
+} from "../../schema/user.schema";
+import { AppError } from "../../utils/errors";
 
 class DrizzleAuthRepository implements Repository {
 	// ── Core user ────────────────────────────────────────────────────────────

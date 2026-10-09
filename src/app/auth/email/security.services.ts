@@ -1,28 +1,28 @@
-import { recordAudit } from "@/app/auth/core/audit.service";
-import type { DeviceInfo } from "@/app/auth/core/auth.types";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { AuthTokenTypes } from "../../../packages/configs/auth-token.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
+import type {
+	ActivityQuery,
+	ChangeEmailBody,
+	ChangePasswordBody,
+	ConfirmEmailChangeBody,
+} from "../../../packages/schema/auth.schemas";
+import type { AuditLogRecord } from "../../../packages/schema/user.schema";
+import { hashOpaqueToken, hashPassword } from "../../../packages/utils/auth";
+import { isUniqueViolation } from "../../../packages/utils/db-errors";
+import { AppError } from "../../../packages/utils/errors";
+import { recordAudit } from "../core/audit.service";
+import type { DeviceInfo } from "../core/auth.types";
 import {
 	notifyEmailChanged,
 	notifyEmailChangeRequested,
 	notifyPasswordChanged,
 	notifyPasswordSet,
 	sendEmailChangeLink,
-} from "@/app/auth/core/auth-mail";
-import { issueEmailToken } from "@/app/auth/core/email-tokens";
-import { type AuthContext, requireReauth } from "@/app/auth/core/reauth";
-import { AuditEvents } from "@/packages/configs/audit.config";
-import { authConfig } from "@/packages/configs/auth.config";
-import { AuthTokenTypes } from "@/packages/configs/auth-token.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type {
-	ActivityQuery,
-	ChangeEmailBody,
-	ChangePasswordBody,
-	ConfirmEmailChangeBody,
-} from "@/packages/schema/auth.schemas";
-import type { AuditLogRecord } from "@/packages/schema/user.schema";
-import { hashOpaqueToken, hashPassword } from "@/packages/utils/auth";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
-import { AppError } from "@/packages/utils/errors";
+} from "../core/auth-mail";
+import { issueEmailToken } from "../core/email-tokens";
+import { type AuthContext, requireReauth } from "../core/reauth";
 
 // Actions that need the CURRENT password again (change password / email, delete account) plus
 // session control and the activity feed. Everything here acts on an already signed-in user.

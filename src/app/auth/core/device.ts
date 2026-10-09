@@ -1,7 +1,7 @@
-import type { DeviceInfo } from "@/app/auth/core/auth.types";
-import { envAppConfig } from "@/packages/env/app.env";
-import { getClientIp } from "@/packages/utils/client-ip";
-import { clampUserAgent, parseUserAgent } from "@/packages/utils/user-agent";
+import { envAppConfig } from "../../../packages/env/app.env";
+import { getClientIp } from "../../../packages/utils/client-ip";
+import { clampUserAgent, parseUserAgent } from "../../../packages/utils/user-agent";
+import type { DeviceInfo } from "./auth.types";
 
 export const extractDeviceInfo = (
 	request: Request,

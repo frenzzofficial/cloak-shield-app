@@ -1,5 +1,5 @@
-import type { AuthPlugin } from "@/app/auth/core/plugin";
-import { envAppConfig } from "@/packages/env/app.env";
+import { envAppConfig } from "../../../packages/env/app.env";
+import type { AuthPlugin } from "../core/plugin";
 import { registerEmailAuthRoutes } from "./email.routes";
 
 // Email + password. Switched by ENABLE_EMAIL_AUTH.

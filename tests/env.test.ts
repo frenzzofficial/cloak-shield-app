@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { parseEnv } from "@/packages/utils/parse-env";
+import { parseEnv } from "../src/packages/utils/parse-env";
 
 const schema = z.object({
 	ENABLE_FEATURE: z.stringbool().default(true),

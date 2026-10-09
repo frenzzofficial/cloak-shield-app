@@ -1,9 +1,8 @@
 import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
-
-import type { AuthPlugin } from "@/app/auth/core/plugin";
-import { appConfig } from "@/packages/configs/app.config";
-import { envOAuthConfig } from "@/packages/env/oauth.env";
-import type { FetchLike } from "@/packages/oauth/http";
+import { appConfig } from "../../../packages/configs/app.config";
+import { envOAuthConfig } from "../../../packages/env/oauth.env";
+import type { FetchLike } from "../../../packages/oauth/http";
+import type { AuthPlugin } from "../core/plugin";
 import { GOOGLE_JWKS_URL } from "./google.client";
 import { registerGoogleRoutes } from "./google.routes";
 

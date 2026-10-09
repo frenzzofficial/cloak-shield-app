@@ -38,3 +38,4 @@ jobs:
       - run: bunx drizzle-kit push --force
       - run: bun run test:coverage
       - run: bun run build:check
+      - run: bun run check:deploy

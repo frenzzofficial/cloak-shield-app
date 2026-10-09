@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseOAuthEnv } from "@/packages/env/oauth.env";
+import { parseOAuthEnv } from "../src/packages/env/oauth.env";
 
 const google = {
 	ENABLE_GOOGLE_AUTH: "true",

@@ -1,5 +1,5 @@
-import type { AuthTokenType } from "@/packages/configs/auth-token.config";
-import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
+import type { AuthTokenType } from "../../src/packages/configs/auth-token.config";
+import type { OAuthProvider } from "../../src/packages/configs/oauth-provider.config";
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
@@ -9,9 +9,9 @@ import type {
 	UserProfile,
 	UserSecurity,
 	UserSession,
-} from "@/packages/schema/user.schema";
-import { AppError } from "@/packages/utils/errors";
-import type { Repository } from "@/types/repository";
+} from "../../src/packages/schema/user.schema";
+import { AppError } from "../../src/packages/utils/errors";
+import type { Repository } from "../../src/types/repository";
 
 const uniqueViolation = (constraint: string): Error =>
 	Object.assign(new Error(`duplicate key value violates unique constraint "${constraint}"`), {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseEnv } from "@/packages/utils/parse-env";
+import { parseEnv } from "../utils/parse-env";
 import { durationSeconds } from "./duration";
 
 // Development-only fallbacks so `bun run dev` works with an empty .env.

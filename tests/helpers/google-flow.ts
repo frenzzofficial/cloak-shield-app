@@ -1,14 +1,14 @@
 // cspell:ignore Fevil Cevil Fapi
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
-import { emailPlugin } from "@/app/auth/email/email.plugin";
-import { createGooglePlugin } from "@/app/auth/google/google.plugin";
-import { createApp } from "@/app/main";
-import { authConfig } from "@/packages/configs/auth.config";
-import { envClientConfig } from "@/packages/env/client.env";
-import { type MailMessage, setMailer } from "@/packages/mailer/mailer";
-import { sealOAuthState } from "@/packages/oauth/state";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
+import { emailPlugin } from "../../src/app/auth/email/email.plugin";
+import { createGooglePlugin } from "../../src/app/auth/google/google.plugin";
+import { createApp } from "../../src/app/main";
+import { authConfig } from "../../src/packages/configs/auth.config";
+import { envClientConfig } from "../../src/packages/env/client.env";
+import { type MailMessage, setMailer } from "../../src/packages/mailer/mailer";
+import { sealOAuthState } from "../../src/packages/oauth/state";
+import { getAuthRepository } from "../../src/packages/repository/drizzle/auth.repository";
 import { asArray, BASE, CHROME_WINDOWS, newEmail, PASSWORD, str } from "./auth-flow";
 import {
 	FakeGoogle,

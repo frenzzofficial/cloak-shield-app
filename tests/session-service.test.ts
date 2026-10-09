@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
-import type { DeviceInfo } from "@/app/auth/core/auth.types";
-import { isBlocked, startSession } from "@/app/auth/core/session.service";
-import { authConfig } from "@/packages/configs/auth.config";
-import { getMailer, type MailMessage, setMailer } from "@/packages/mailer/mailer";
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { User } from "@/packages/schema/user.schema";
+import type { DeviceInfo } from "../src/app/auth/core/auth.types";
+import { isBlocked, startSession } from "../src/app/auth/core/session.service";
+import { authConfig } from "../src/packages/configs/auth.config";
+import { getMailer, type MailMessage, setMailer } from "../src/packages/mailer/mailer";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
+import type { User } from "../src/packages/schema/user.schema";
 import { InMemoryAuthRepository } from "./helpers/memory-repo";
 
 const CHROME: DeviceInfo = {

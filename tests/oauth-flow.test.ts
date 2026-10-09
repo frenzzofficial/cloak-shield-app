@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { callbackUrl, oauthStateCookieName } from "@/app/auth/core/oauth-flow";
-import { envClientConfig } from "@/packages/env/client.env";
+import { callbackUrl, oauthStateCookieName } from "../src/app/auth/core/oauth-flow";
+import { envClientConfig } from "../src/packages/env/client.env";
 
 const ORIGIN = new URL(envClientConfig.CLIENT_ORIGIN).origin;
 

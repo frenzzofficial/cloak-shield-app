@@ -1,4 +1,4 @@
-import { setAuthRepository } from "@/packages/repository/drizzle/auth.repository";
+import { setAuthRepository } from "../src/packages/repository/drizzle/auth.repository";
 import { defineAccountFlowTests } from "./helpers/account-flow";
 import { defineAuthFlowTests } from "./helpers/auth-flow";
 import { defineGoogleFlowTests } from "./helpers/google-flow";

@@ -14,7 +14,7 @@ import { Elysia } from "elysia";
 // real Node/Bun module resolution feature. Vercel's build step rewrites `@/`-alias
 // specifiers inside STATIC `import` statements (like the one two lines up), but a runtime
 // specifier inside a DYNAMIC `import()` call is left as-is and resolved by the runtime
-// directly — which does not know what "@" means, so `import("@/app/main")` fails in
+// directly — which does not know what "@" means, so `import("./app/main")` fails in
 // production with "Cannot find module '@/app/main'" even though it works locally under
 // `bun run`, which does understand tsconfig paths. A relative path always resolves.
 const buildApp = async (): Promise<Elysia> => {

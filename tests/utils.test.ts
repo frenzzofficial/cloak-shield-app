@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { SignJWT } from "jose";
-import { parseAuthEnv } from "@/packages/env/auth.env";
-import { parseDurationSeconds } from "@/packages/env/duration";
+import { parseAuthEnv } from "../src/packages/env/auth.env";
+import { parseDurationSeconds } from "../src/packages/env/duration";
 import {
 	generateOpaqueToken,
 	hashOpaqueToken,
@@ -12,9 +12,9 @@ import {
 	verifyAgainstDummyHash,
 	verifyPassword,
 	verifyRefreshToken,
-} from "@/packages/utils/auth";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
-import { clampUserAgent, parseUserAgent } from "@/packages/utils/user-agent";
+} from "../src/packages/utils/auth";
+import { isUniqueViolation } from "../src/packages/utils/db-errors";
+import { clampUserAgent, parseUserAgent } from "../src/packages/utils/user-agent";
 
 const CLAIMS = { userId: "u1", email: "a@b.com", role: "USER", sessionId: "s1" };
 

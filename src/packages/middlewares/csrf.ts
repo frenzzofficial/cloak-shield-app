@@ -1,9 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import type { Elysia } from "elysia";
 
-import { authConfig } from "@/packages/configs/auth.config";
-import { envAppConfig } from "@/packages/env/app.env";
-import { AppError } from "@/packages/utils/errors";
+import { authConfig } from "../configs/auth.config";
+import { envAppConfig } from "../env/app.env";
+import { AppError } from "../utils/errors";
 
 export const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";

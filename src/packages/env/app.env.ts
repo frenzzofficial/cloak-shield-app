@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseEnv } from "@/packages/utils/parse-env";
+import { parseEnv } from "../utils/parse-env";
 
 // Development-only fallback. Production must provide its own value (see superRefine below).
 const DEV_APP_SECRET = "abcdefghijklmnopqrstuvwxyz1234567890";

@@ -1,18 +1,18 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
-import type { DeviceInfo } from "@/app/auth/core/auth.types";
+import type { DeviceInfo } from "../../src/app/auth/core/auth.types";
 import {
 	type ExternalIdentity,
 	IdentityRefusal,
 	resolveExternalIdentity,
-} from "@/app/auth/core/identity.service";
-import { startSession } from "@/app/auth/core/session.service";
-import { createApp } from "@/app/main";
-import { authConfig } from "@/packages/configs/auth.config";
-import { type MailMessage, setMailer } from "@/packages/mailer/mailer";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
-import type { User } from "@/packages/schema/user.schema";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
+} from "../../src/app/auth/core/identity.service";
+import { startSession } from "../../src/app/auth/core/session.service";
+import { createApp } from "../../src/app/main";
+import { authConfig } from "../../src/packages/configs/auth.config";
+import { type MailMessage, setMailer } from "../../src/packages/mailer/mailer";
+import { getAuthRepository } from "../../src/packages/repository/drizzle/auth.repository";
+import type { User } from "../../src/packages/schema/user.schema";
+import { isUniqueViolation } from "../../src/packages/utils/db-errors";
 import { BASE, NEW_PASSWORD, newEmail, PASSWORD, str } from "./auth-flow";
 import { pick, TestClient } from "./http";
 

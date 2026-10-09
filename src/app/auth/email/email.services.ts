@@ -1,7 +1,7 @@
-import { AuditEvents } from "@/packages/configs/audit.config";
-import { authConfig } from "@/packages/configs/auth.config";
-import { AuthTokenTypes } from "@/packages/configs/auth-token.config";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import { authConfig } from "../../../packages/configs/auth.config";
+import { AuthTokenTypes } from "../../../packages/configs/auth-token.config";
+import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
 import type {
 	ForgotPasswordBody,
 	ResendVerificationBody,
@@ -9,8 +9,8 @@ import type {
 	SignInBody,
 	SignUpBody,
 	VerifyEmailBody,
-} from "@/packages/schema/auth.schemas";
-import type { User, UserSession } from "@/packages/schema/user.schema";
+} from "../../../packages/schema/auth.schemas";
+import type { User, UserSession } from "../../../packages/schema/user.schema";
 import {
 	hashIdentifier,
 	hashOpaqueToken,
@@ -19,29 +19,20 @@ import {
 	verifyAgainstDummyHash,
 	verifyPassword,
 	verifyRefreshToken,
-} from "@/packages/utils/auth";
-import { bestEffort } from "@/packages/utils/best-effort";
-import { isUniqueViolation } from "@/packages/utils/db-errors";
-import { AppError } from "@/packages/utils/errors";
-import { logger } from "@/packages/utils/logger";
+} from "../../../packages/utils/auth";
+import { bestEffort } from "../../../packages/utils/best-effort";
+import { isUniqueViolation } from "../../../packages/utils/db-errors";
+import { AppError } from "../../../packages/utils/errors";
+import { logger } from "../../../packages/utils/logger";
 
 const repo = () => getAuthRepository();
 
-import { newPreferences, newProfile, newSecurity } from "@/app/auth/core/account-defaults";
-import { recordAudit } from "@/app/auth/core/audit.service";
-import type { DeviceInfo, SessionTokens } from "@/app/auth/core/auth.types";
-import {
-	notifyPasswordChanged,
-	sendResetLink,
-	sendVerificationLink,
-} from "@/app/auth/core/auth-mail";
-import { issueEmailToken } from "@/app/auth/core/email-tokens";
-import {
-	buildSession,
-	isBlocked,
-	issueTokens,
-	startSession,
-} from "@/app/auth/core/session.service";
+import { newPreferences, newProfile, newSecurity } from "../core/account-defaults";
+import { recordAudit } from "../core/audit.service";
+import type { DeviceInfo, SessionTokens } from "../core/auth.types";
+import { notifyPasswordChanged, sendResetLink, sendVerificationLink } from "../core/auth-mail";
+import { issueEmailToken } from "../core/email-tokens";
+import { buildSession, isBlocked, issueTokens, startSession } from "../core/session.service";
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 

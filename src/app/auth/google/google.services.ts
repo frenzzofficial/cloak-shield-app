@@ -1,21 +1,20 @@
 import type { JWTVerifyGetKey } from "jose";
-
-import type { DeviceInfo, SessionTokens } from "@/app/auth/core/auth.types";
-import { notifyProviderLinked } from "@/app/auth/core/auth-mail";
-import { IdentityRefusal } from "@/app/auth/core/identity.service";
-import type { OAuthErrorCode } from "@/app/auth/core/oauth-flow";
-import type { AuthCore } from "@/app/auth/core/plugin";
-import { AuditEvents } from "@/packages/configs/audit.config";
-import type { FetchLike } from "@/packages/oauth/http";
-import { IdTokenError, verifyIdToken } from "@/packages/oauth/oidc";
+import { AuditEvents } from "../../../packages/configs/audit.config";
+import type { FetchLike } from "../../../packages/oauth/http";
+import { IdTokenError, verifyIdToken } from "../../../packages/oauth/oidc";
 import {
 	codeChallengeS256,
 	generateCodeVerifier,
 	generateRandomToken,
-} from "@/packages/oauth/pkce";
-import { safeRedirectPath } from "@/packages/oauth/redirect";
-import { safeEqual, sealOAuthState, unsealOAuthState } from "@/packages/oauth/state";
-import { logger } from "@/packages/utils/logger";
+} from "../../../packages/oauth/pkce";
+import { safeRedirectPath } from "../../../packages/oauth/redirect";
+import { safeEqual, sealOAuthState, unsealOAuthState } from "../../../packages/oauth/state";
+import { logger } from "../../../packages/utils/logger";
+import type { DeviceInfo, SessionTokens } from "../core/auth.types";
+import { notifyProviderLinked } from "../core/auth-mail";
+import { IdentityRefusal } from "../core/identity.service";
+import type { OAuthErrorCode } from "../core/oauth-flow";
+import type { AuthCore } from "../core/plugin";
 import { buildAuthorizationUrl, exchangeAuthorizationCode, GOOGLE_ISSUERS } from "./google.client";
 
 export const GOOGLE_PROVIDER_KEY = "google";

@@ -1,9 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
-import { createApp } from "@/app/main";
-import { authConfig } from "@/packages/configs/auth.config";
-import { type MailMessage, setMailer } from "@/packages/mailer/mailer";
-import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
+import { createApp } from "../../src/app/main";
+import { authConfig } from "../../src/packages/configs/auth.config";
+import { type MailMessage, setMailer } from "../../src/packages/mailer/mailer";
+import { getAuthRepository } from "../../src/packages/repository/drizzle/auth.repository";
 import {
 	asArray,
 	BASE,

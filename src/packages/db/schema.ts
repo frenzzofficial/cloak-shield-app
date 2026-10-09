@@ -18,7 +18,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
+import type { AuditEvent, AuditOutcome } from "../configs/audit.config";
 
 export const userRoleEnum = pgEnum("user_role", ["USER", "ADMIN"]);
 export const userStatusEnum = pgEnum("user_status", [

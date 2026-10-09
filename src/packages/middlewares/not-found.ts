@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 
-import { appConfig } from "@/packages/configs/app.config";
-import { getHTML } from "@/packages/utils/static-files";
+import { appConfig } from "../configs/app.config";
+import { getHTML } from "../utils/static-files";
 
 // Explicit catch-all for anything no route matched. Elysia's router already falls through
 // to onError's `code === "NOT_FOUND"` branch for this case (kept as a defensive fallback in

@@ -1,4 +1,8 @@
-import type { UserPreferences, UserProfile, UserSecurity } from "@/packages/schema/user.schema";
+import type {
+	UserPreferences,
+	UserProfile,
+	UserSecurity,
+} from "../../../packages/schema/user.schema";
 
 // What a brand-new account starts with, whichever way it was created (email form or a provider).
 // `userId` is "" on purpose: createUserWithSession fills in the real id inside its transaction.

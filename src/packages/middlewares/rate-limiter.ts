@@ -1,8 +1,8 @@
 import type { Elysia } from "elysia";
 
-import { envAppConfig } from "@/packages/env/app.env";
-import { getClientIp } from "@/packages/utils/client-ip";
-import { AppError } from "@/packages/utils/errors";
+import { envAppConfig } from "../env/app.env";
+import { getClientIp } from "../utils/client-ip";
+import { AppError } from "../utils/errors";
 
 // Hand-written fixed-window rate limiter, keyed by client IP. No dependency — the two
 // published elysia-rate-limit-style packages have caused real trouble across different

@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 
-import { appConfig } from "@/packages/configs/app.config";
-import { db } from "@/packages/db/client";
-import type { HealthResponse } from "@/packages/schema/health.schema";
-import { logger } from "@/packages/utils/logger";
+import { appConfig } from "../../packages/configs/app.config";
+import { db } from "../../packages/db/client";
+import type { HealthResponse } from "../../packages/schema/health.schema";
+import { logger } from "../../packages/utils/logger";
 
 /** One cheap round trip: proves the connection works and the database answers. */
 export type DatabasePing = () => Promise<void>;
