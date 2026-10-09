@@ -3,6 +3,7 @@ import { authConfig } from "../../../packages/configs/auth.config";
 import { getAuthRepository } from "../../../packages/repository/drizzle/auth.repository";
 import type { User, UserSession } from "../../../packages/schema/user.schema";
 import { signAccessToken, signRefreshToken } from "../../../packages/utils/auth";
+import { bestEffort } from "../../../packages/utils/best-effort";
 import { recordAudit } from "./audit.service";
 import type { AuthTokens, DeviceInfo, SessionTokens } from "./auth.types";
 import { notifyNewDevice } from "./auth-mail";
@@ -85,12 +86,21 @@ export const startSession = async (
 		? authConfig.longSessionTtlSeconds
 		: authConfig.shortSessionTtlSeconds;
 
-	// Looked up BEFORE this sign-in is recorded, so it can only match earlier ones.
-	const history = await repo().getDeviceHistory(
-		user.id,
-		device.deviceName,
-		new Date(now.getTime() - authConfig.newDeviceWindowSeconds * 1_000),
-	);
+	// Looked up BEFORE this sign-in is recorded, so it can only match earlier ones. It only feeds
+	// the new-device email, so if the lookup fails (audit table missing or unreachable) the
+	// sign-in still goes ahead and no alert is sent: failing a login over a courtesy email
+	// would turn a minor outage into a full one.
+	let history: { knownDevice: boolean; hasHistory: boolean } = {
+		knownDevice: true,
+		hasHistory: false,
+	};
+	await bestEffort("device history lookup", async () => {
+		history = await repo().getDeviceHistory(
+			user.id,
+			device.deviceName,
+			new Date(now.getTime() - authConfig.newDeviceWindowSeconds * 1_000),
+		);
+	});
 
 	await repo().deleteExpiredSessionsForUser(user.id);
 	const session = await repo().createSession(

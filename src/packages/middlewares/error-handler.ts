@@ -74,6 +74,12 @@ export const registerErrorHandler = (app: Elysia): void => {
 		logger.error("unhandled error", {
 			code: String(code),
 			message: error instanceof Error ? error.message : String(error),
+			// Drizzle wraps the real database error ("relation ... does not exist") in a generic
+			// "Failed query" one; without the cause the log cannot say what actually went wrong.
+			cause:
+				error instanceof Error && error.cause instanceof Error
+					? error.cause.message
+					: undefined,
 			stack: error instanceof Error ? error.stack : undefined,
 		});
 

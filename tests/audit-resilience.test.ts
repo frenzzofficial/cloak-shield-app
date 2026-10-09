@@ -64,3 +64,38 @@ describe("side effects never break the main request", () => {
 		expect((await client.post(`${BASE}/signout`)).status).toBe(200);
 	});
 });
+
+// The device lookup only decides whether to send a "new sign-in" email. A broken audit table
+// must not turn into a 500 on /signin (a real deployment whose database was not migrated did).
+class BrokenDeviceLookupRepository extends InMemoryAuthRepository {
+	override async getDeviceHistory(): Promise<{ knownDevice: boolean; hasHistory: boolean }> {
+		throw new Error('relation "audit_logs" does not exist');
+	}
+}
+
+describe("a failing device-history lookup", () => {
+	const app = createApp();
+
+	beforeAll(() => setAuthRepository(new BrokenDeviceLookupRepository()));
+	afterAll(() => setAuthRepository(null));
+
+	test("still signs the user in", async () => {
+		const client = new TestClient(app);
+		const email = newEmail();
+
+		expect(
+			(
+				await client.post(`${BASE}/signup`, {
+					json: { fullname: "Test User", email, password: PASSWORD },
+				})
+			).status,
+		).toBe(201);
+
+		const other = new TestClient(app);
+		const signedIn = await other.post(`${BASE}/signin`, {
+			json: { email, password: PASSWORD },
+		});
+		expect(signedIn.status).toBe(200);
+		expect((await other.get(`${BASE}/me`)).status).toBe(200);
+	});
+});
