@@ -1,10 +1,12 @@
 import { and, desc, eq, gt, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { AuditEvents } from "@/packages/configs/audit.config";
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
+import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
 import { db } from "@/packages/db/client";
 import {
 	auditLogs,
 	authTokens,
+	oauthAccounts,
 	userPreferences,
 	userProfiles,
 	userSecurity,
@@ -14,6 +16,7 @@ import {
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
+	OAuthAccountRecord,
 	User,
 	UserPreferences,
 	UserProfile,
@@ -394,6 +397,74 @@ class DrizzleAuthRepository implements Repository {
 		return rows as UserSession[];
 	}
 
+	// ── Provider identities ─────────────────────────────────────────────────
+
+	async findOAuthAccount(
+		provider: OAuthProvider,
+		providerUserId: string,
+	): Promise<OAuthAccountRecord | undefined> {
+		const [row] = await db
+			.select()
+			.from(oauthAccounts)
+			.where(
+				and(
+					eq(oauthAccounts.provider, provider),
+					eq(oauthAccounts.providerUserId, providerUserId),
+				),
+			)
+			.limit(1);
+
+		return row;
+	}
+
+	async listOAuthAccountsForUser(userId: string): Promise<OAuthAccountRecord[]> {
+		return db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, userId));
+	}
+
+	async createOAuthAccount(account: OAuthAccountRecord): Promise<void> {
+		await db.insert(oauthAccounts).values({
+			id: account.id,
+			userId: account.userId,
+			provider: account.provider,
+			providerUserId: account.providerUserId,
+			createdAt: account.createdAt,
+			lastLoginAt: account.lastLoginAt,
+		});
+	}
+
+	async markOAuthLogin(id: string, at: Date): Promise<void> {
+		await db.update(oauthAccounts).set({ lastLoginAt: at }).where(eq(oauthAccounts.id, id));
+	}
+
+	async reclaimAccount(userId: string): Promise<User | undefined> {
+		// One transaction: either the account is fully cleaned and verified, or nothing changed.
+		return db.transaction(async (tx) => {
+			await tx
+				.update(userSecurity)
+				.set({
+					passwordHash: null,
+					failedLoginAttempts: 0,
+					lockedUntil: null,
+					updatedAt: new Date(),
+				})
+				.where(eq(userSecurity.userId, userId));
+			await tx.delete(userSessions).where(eq(userSessions.userId, userId));
+			await tx.delete(authTokens).where(eq(authTokens.userId, userId));
+
+			const [row] = await tx
+				.update(users)
+				.set({
+					emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())`,
+					status: sql`(CASE WHEN ${users.status} = 'PENDING_VERIFICATION' THEN 'ACTIVE'::user_status ELSE ${users.status} END)`,
+					updatedAt: new Date(),
+				})
+				.where(eq(users.id, userId))
+				.returning();
+
+			return row;
+		});
+	}
+
 	// ── Audit trail ─────────────────────────────────────────────────────────
 
 	async createAuditLog(entry: AuditLogRecord): Promise<void> {
@@ -542,6 +613,7 @@ class DrizzleAuthRepository implements Repository {
 		security: UserSecurity;
 		preferences: UserPreferences;
 		session?: UserSession;
+		oauthAccount?: OAuthAccountRecord;
 	}): Promise<User> {
 		return db.transaction(async (tx) => {
 			const [createdUser] = await tx
@@ -607,6 +679,17 @@ class DrizzleAuthRepository implements Repository {
 					refreshTokenId: args.session.refreshTokenId,
 					lastSeenAt: args.session.lastSeenAt,
 					expiresAt: args.session.expiresAt,
+				});
+			}
+
+			if (args.oauthAccount) {
+				await tx.insert(oauthAccounts).values({
+					id: args.oauthAccount.id,
+					userId: createdUser.id,
+					provider: args.oauthAccount.provider,
+					providerUserId: args.oauthAccount.providerUserId,
+					createdAt: args.oauthAccount.createdAt,
+					lastLoginAt: args.oauthAccount.lastLoginAt,
 				});
 			}
 

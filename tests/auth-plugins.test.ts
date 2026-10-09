@@ -119,7 +119,11 @@ describe("AuthCore", () => {
 		expect(typeof core.cookies.readRefreshToken).toBe("function");
 		expect(typeof core.cookies.wantsTokensInBody).toBe("function");
 		expect(typeof core.device.extract).toBe("function");
-		expect(typeof core.reauth.requirePassword).toBe("function");
+		expect(typeof core.reauth.require).toBe("function");
+		expect(typeof core.identities.resolve).toBe("function");
+		expect(typeof core.oauth.setStateCookie).toBe("function");
+		expect(typeof core.oauth.takeStateCookie).toBe("function");
+		expect(typeof core.oauth.callbackUrl).toBe("function");
 	});
 });
 
@@ -249,5 +253,53 @@ describe("account routes depend on having a way to sign in", () => {
 			"/api/v1/account/profile",
 		);
 		expect(response.status).toBe(404);
+	});
+});
+
+describe("plugin capabilities", () => {
+	const provider = (overrides: Partial<AuthPlugin> = {}) =>
+		fakePlugin({
+			id: "email",
+			kind: "password",
+			label: "Email",
+			provides: ["session-routes"],
+			...overrides,
+		});
+	const needy = (overrides: Partial<AuthPlugin> = {}) =>
+		fakePlugin({ id: "google", label: "Google", requires: ["session-routes"], ...overrides });
+
+	test("a requirement met by an enabled plugin boots", () => {
+		const mounted = mountAuthPlugins(new Elysia(), [provider(), needy()]);
+		expect(mounted.map((plugin) => plugin.id)).toEqual(["email", "google"]);
+	});
+
+	test("an unmet requirement fails at boot and says what is missing", () => {
+		expect(() => mountAuthPlugins(new Elysia(), [needy()])).toThrow(/needs "session-routes"/);
+	});
+
+	test("a DISABLED provider does not count", () => {
+		expect(() =>
+			mountAuthPlugins(new Elysia(), [provider({ enabled: false }), needy()]),
+		).toThrow(/needs "session-routes"/);
+	});
+
+	test("a disabled plugin's own requirements are not checked", () => {
+		expect(mountAuthPlugins(new Elysia(), [needy({ enabled: false })])).toEqual([]);
+	});
+
+	test("startPath is advertised only by methods that have one", async () => {
+		const app = new Elysia();
+		mountAuthPlugins(app, [provider(), needy({ startPath: "/api/v1/auth/google/start" })]);
+
+		const response = await new TestClient(app).get(PROVIDERS);
+		expect(pick(response.body, "providers")).toEqual([
+			{ id: "email", kind: "password", label: "Email" },
+			{
+				id: "google",
+				kind: "oauth",
+				label: "Google",
+				startPath: "/api/v1/auth/google/start",
+			},
+		]);
 	});
 });

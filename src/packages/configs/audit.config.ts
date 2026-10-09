@@ -19,6 +19,10 @@ export const AuditEvents = {
 	PROFILE_UPDATED: "PROFILE_UPDATED",
 	PREFERENCES_UPDATED: "PREFERENCES_UPDATED",
 	ACCOUNT_DELETED: "ACCOUNT_DELETED",
+	OAUTH_ACCOUNT_LINKED: "OAUTH_ACCOUNT_LINKED",
+	// An unverified email account was claimed by whoever proved they own the mailbox (via a
+	// provider): its password, sessions and pending links were wiped first.
+	ACCOUNT_RECLAIMED: "ACCOUNT_RECLAIMED",
 } as const;
 
 export type AuditEvent = (typeof AuditEvents)[keyof typeof AuditEvents];

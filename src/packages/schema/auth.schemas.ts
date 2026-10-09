@@ -73,7 +73,9 @@ export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;
 
 export const changePasswordBodySchema = z
 	.object({
-		currentPassword: signInPasswordRules,
+		// Optional: an account that only signs in through a provider has no current password.
+		// (An account that HAS one is told it is required.)
+		currentPassword: signInPasswordRules.optional(),
 		newPassword: passwordRules,
 		confirmPassword: confirmPasswordRules,
 	})
@@ -81,15 +83,19 @@ export const changePasswordBodySchema = z
 		message: schemaMessages.passwordMismatch,
 		path: ["confirmPassword"],
 	})
-	.refine((data) => data.currentPassword !== data.newPassword, {
-		message: "New password must be different from the current password",
-		path: ["newPassword"],
-	});
+	.refine(
+		(data) => data.currentPassword === undefined || data.currentPassword !== data.newPassword,
+		{
+			message: "New password must be different from the current password",
+			path: ["newPassword"],
+		},
+	);
 
 export const changeEmailSchema = z.object({
 	newEmail: emailRules,
 	// Re-authentication: a stolen session alone must not be able to take over the account.
-	password: signInPasswordRules,
+	// Optional because provider-only accounts re-authenticate by a recent sign-in instead.
+	password: signInPasswordRules.optional(),
 });
 
 export const confirmEmailChangeSchema = z.object({
@@ -97,7 +103,8 @@ export const confirmEmailChangeSchema = z.object({
 });
 
 export const deleteAccountSchema = z.object({
-	password: signInPasswordRules,
+	// Optional: provider-only accounts re-authenticate by a recent sign-in instead.
+	password: signInPasswordRules.optional(),
 });
 
 export const sessionParamsSchema = z.object({

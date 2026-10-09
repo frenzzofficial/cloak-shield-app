@@ -1,7 +1,7 @@
 import { recordAudit } from "@/app/auth/core/audit.service";
 import type { DeviceInfo } from "@/app/auth/core/auth.types";
 import { notifyAccountDeleted } from "@/app/auth/core/auth-mail";
-import { type AuthContext, requirePassword } from "@/app/auth/core/reauth";
+import { type AuthContext, requireReauth } from "@/app/auth/core/reauth";
 import { AuditEvents } from "@/packages/configs/audit.config";
 import { getAuthRepository } from "@/packages/repository/drizzle/auth.repository";
 import type { UpdatePreferencesBody, UpdateProfileBody } from "@/packages/schema/account.schemas";
@@ -121,10 +121,10 @@ export const updatePreferences = async (
  */
 export const deleteAccount = async (
 	auth: AuthContext,
-	password: string,
+	password: string | undefined,
 	device: DeviceInfo,
 ): Promise<void> => {
-	const user = await requirePassword(auth.userId, password, device, "delete_account");
+	const user = await requireReauth(auth, password, device, "delete_account");
 
 	// Recorded first: afterwards there is no account left to attach it to.
 	await recordAudit({ event: AuditEvents.ACCOUNT_DELETED, userId: user.id, device });

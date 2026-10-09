@@ -114,3 +114,10 @@ export const accountActionLimiter = limiter({
 	max: 20,
 	windowSeconds: 15 * 60,
 });
+
+/** Starting and finishing a provider sign-in: each hit can cost a request to the provider. */
+export const oauthLimiter = limiter({
+	prefix: "oauth",
+	max: 40,
+	windowSeconds: 15 * 60,
+});

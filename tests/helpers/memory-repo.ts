@@ -1,7 +1,9 @@
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
+import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
+	OAuthAccountRecord,
 	User,
 	UserPreferences,
 	UserProfile,
@@ -28,6 +30,7 @@ export class InMemoryAuthRepository implements Repository {
 	private sessions = new Map<string, UserSession>();
 	private tokens = new Map<string, AuthTokenRecord>();
 	private audit: AuditLogRecord[] = [];
+	private oauth = new Map<string, OAuthAccountRecord>();
 
 	// ── Core user ───────────────────────────────────────────────────────────
 	async findUserByEmail(email: string): Promise<User | undefined> {
@@ -73,6 +76,7 @@ export class InMemoryAuthRepository implements Repository {
 		this.preferences.delete(id);
 		await this.deleteSessionsForUser(id);
 		for (const [key, token] of this.tokens) if (token.userId === id) this.tokens.delete(key);
+		for (const [key, account] of this.oauth) if (account.userId === id) this.oauth.delete(key);
 		// Like ON DELETE SET NULL: history stays, the link to the account goes.
 		this.audit = this.audit.map((entry) =>
 			entry.userId === id ? { ...entry, userId: null } : entry,
@@ -255,6 +259,64 @@ export class InMemoryAuthRepository implements Repository {
 		for (const session of surplus) this.sessions.delete(session.id);
 	}
 
+	// ── Provider identities ─────────────────────────────────────────────────
+	async findOAuthAccount(
+		provider: OAuthProvider,
+		providerUserId: string,
+	): Promise<OAuthAccountRecord | undefined> {
+		const found = [...this.oauth.values()].find(
+			(account) => account.provider === provider && account.providerUserId === providerUserId,
+		);
+		return found ? { ...found } : undefined;
+	}
+
+	async listOAuthAccountsForUser(userId: string): Promise<OAuthAccountRecord[]> {
+		return [...this.oauth.values()]
+			.filter((account) => account.userId === userId)
+			.map((account) => ({ ...account }));
+	}
+
+	async createOAuthAccount(account: OAuthAccountRecord): Promise<void> {
+		const taken = [...this.oauth.values()].some(
+			(existing) =>
+				(existing.provider === account.provider &&
+					existing.providerUserId === account.providerUserId) ||
+				(existing.userId === account.userId && existing.provider === account.provider),
+		);
+		if (taken) throw uniqueViolation("oauth_accounts_unique");
+		this.oauth.set(account.id, { ...account });
+	}
+
+	async markOAuthLogin(id: string, at: Date): Promise<void> {
+		const account = this.oauth.get(id);
+		if (account) this.oauth.set(id, { ...account, lastLoginAt: at });
+	}
+
+	async reclaimAccount(userId: string): Promise<User | undefined> {
+		const user = this.users.get(userId);
+		const security = this.security.get(userId);
+		if (!user || !security) return undefined;
+
+		this.security.set(userId, {
+			...security,
+			passwordHash: null,
+			failedLoginAttempts: 0,
+			lockedUntil: null,
+			updatedAt: new Date(),
+		});
+		await this.deleteSessionsForUser(userId);
+		for (const [id, token] of this.tokens) if (token.userId === userId) this.tokens.delete(id);
+
+		const next: User = {
+			...user,
+			emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+			status: user.status === "PENDING_VERIFICATION" ? "ACTIVE" : user.status,
+			updatedAt: new Date(),
+		};
+		this.users.set(userId, next);
+		return next;
+	}
+
 	// ── Audit trail ─────────────────────────────────────────────────────────
 	async createAuditLog(entry: AuditLogRecord): Promise<void> {
 		this.audit.push({ ...entry });
@@ -371,6 +433,7 @@ export class InMemoryAuthRepository implements Repository {
 		security: UserSecurity;
 		preferences: UserPreferences;
 		session?: UserSession;
+		oauthAccount?: OAuthAccountRecord;
 	}): Promise<User> {
 		// Everything is validated first, then written, so a failure leaves nothing behind
 		// (the real implementation gets the same guarantee from a transaction).
@@ -383,6 +446,24 @@ export class InMemoryAuthRepository implements Repository {
 		this.profiles.set(user.id, { ...args.profile, userId: user.id });
 		this.preferences.set(user.id, { ...args.preferences, userId: user.id });
 		if (args.session) this.sessions.set(args.session.id, { ...args.session, userId: user.id });
+
+		if (args.oauthAccount) {
+			// Same atomicity as the real transaction: if the identity is taken, nothing was created.
+			const taken = [...this.oauth.values()].some(
+				(a) =>
+					a.provider === args.oauthAccount?.provider &&
+					a.providerUserId === args.oauthAccount.providerUserId,
+			);
+			if (taken) {
+				this.users.delete(user.id);
+				this.security.delete(user.id);
+				this.profiles.delete(user.id);
+				this.preferences.delete(user.id);
+				this.sessions.delete(args.session?.id ?? "");
+				throw uniqueViolation("oauth_accounts_provider_identity_uq");
+			}
+			this.oauth.set(args.oauthAccount.id, { ...args.oauthAccount, userId: user.id });
+		}
 		return user;
 	}
 

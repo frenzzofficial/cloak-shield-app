@@ -1,3 +1,4 @@
+import { type OAuthProvider, OAuthProviderLabels } from "@/packages/configs/oauth-provider.config";
 import { getMailer } from "@/packages/mailer/mailer";
 import {
 	accountDeletedTemplate,
@@ -7,6 +8,8 @@ import {
 	emailChangeRequestedTemplate,
 	newDeviceTemplate,
 	passwordChangedTemplate,
+	passwordSetTemplate,
+	providerLinkedTemplate,
 	resetPasswordTemplate,
 	verifyEmailTemplate,
 } from "@/packages/mailer/templates";
@@ -51,6 +54,20 @@ export const notifyEmailChanged = (oldEmail: string, newEmail: string): Promise<
 
 export const notifyPasswordChanged = (user: User, device: DeviceInfo): Promise<void> =>
 	send("password changed notice", user.email, passwordChangedTemplate(summary(device)));
+
+export const notifyPasswordSet = (user: User, device: DeviceInfo): Promise<void> =>
+	send("password set notice", user.email, passwordSetTemplate(summary(device)));
+
+export const notifyProviderLinked = (
+	user: User,
+	provider: OAuthProvider,
+	device: DeviceInfo,
+): Promise<void> =>
+	send(
+		"provider linked notice",
+		user.email,
+		providerLinkedTemplate(OAuthProviderLabels[provider], summary(device)),
+	);
 
 export const notifyNewDevice = (user: User, device: DeviceInfo): Promise<void> =>
 	send("new device notice", user.email, newDeviceTemplate(summary(device)));

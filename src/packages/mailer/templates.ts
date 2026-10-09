@@ -57,6 +57,16 @@ export const passwordChangedTemplate = (device: DeviceSummary): Template => ({
 	text: `Your password was just changed.\n\n${describeDevice(device)}\n\nIf this was not you, reset your password right away and contact support.${footer}`,
 });
 
+export const passwordSetTemplate = (device: DeviceSummary): Template => ({
+	subject: `A password was added to your ${appName} account`,
+	text: `A password was just added to your account, so you can now sign in with your email and that password as well as the way you used before.\n\n${describeDevice(device)}\n\nIf this was not you, reset your password right away, sign out your other devices and contact support.${footer}`,
+});
+
+export const providerLinkedTemplate = (provider: string, device: DeviceSummary): Template => ({
+	subject: `${provider} was connected to your ${appName} account`,
+	text: `You can now sign in to your account with ${provider}, in addition to the way you used before. This happened because someone signed in with a ${provider} account that uses your email address.\n\n${describeDevice(device)}\n\nIf this was you, no action is needed. If not, change your password, sign out your other devices and contact support.${footer}`,
+});
+
 export const newDeviceTemplate = (device: DeviceSummary): Template => ({
 	subject: `New sign-in to your ${appName} account`,
 	text: `We noticed a sign-in from a device we have not seen recently.\n\n${describeDevice(device)}\n\nIf this was you, no action is needed. If not, change your password and sign out your other devices.${footer}`,

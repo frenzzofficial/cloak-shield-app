@@ -1,7 +1,9 @@
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
+import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
 import type {
 	AuditLogRecord,
 	AuthTokenRecord,
+	OAuthAccountRecord,
 	User,
 	UserPreferences,
 	UserProfile,
@@ -86,6 +88,24 @@ export interface Repository {
 	deleteSessionsForUser(userId: string): Promise<void>;
 	listSessionsForUser(userId: string): Promise<UserSession[]>;
 
+	// ── Provider identities ─────────────────────────────────────────────────────
+
+	findOAuthAccount(
+		provider: OAuthProvider,
+		providerUserId: string,
+	): Promise<OAuthAccountRecord | undefined>;
+	listOAuthAccountsForUser(userId: string): Promise<OAuthAccountRecord[]>;
+	/** Throws a unique violation if the identity or the (user, provider) pair already exists. */
+	createOAuthAccount(account: OAuthAccountRecord): Promise<void>;
+	markOAuthLogin(id: string, at: Date): Promise<void>;
+	/**
+	 * Takes over an account whose email was never verified, atomically: removes its password and
+	 * lockout, every session, and every pending token, then marks the email verified (and
+	 * PENDING_VERIFICATION becomes ACTIVE). Whoever registered it by email did not prove they own
+	 * the address; whoever just signed in through a provider did.
+	 */
+	reclaimAccount(userId: string): Promise<User | undefined>;
+
 	// ── Audit trail ─────────────────────────────────────────────────────────────
 
 	createAuditLog(entry: AuditLogRecord): Promise<void>;
@@ -131,5 +151,7 @@ export interface Repository {
 		preferences: UserPreferences;
 		/** Omitted when sign-up must wait for email verification before any session exists. */
 		session?: UserSession;
+		/** Provider sign-up: linked in the same transaction, so the account never exists half-made. */
+		oauthAccount?: OAuthAccountRecord;
 	}): Promise<User>;
 }

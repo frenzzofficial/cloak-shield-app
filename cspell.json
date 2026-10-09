@@ -2,7 +2,6 @@
 	"version": "0.2",
 	"language": "en",
 	"words": [
-		"Ánna",
 		"biomejs",
 		"bunx",
 		"chargebacks",
@@ -24,6 +23,7 @@
 		"Gecko",
 		"getaddrinfo",
 		"getnada",
+		"googleusercontent",
 		"guerrillamail",
 		"HSTS",
 		"httponly",
@@ -40,6 +40,8 @@
 		"navlinks",
 		"Nguyễn",
 		"nosniff",
+		"PKCE",
+		"pkce",
 		"prefault",
 		"prettify",
 		"secretlint",
@@ -56,7 +58,8 @@
 		"unconfigured",
 		"vercel",
 		"yopmail",
-		"zod"
+		"zod",
+		"Ánna"
 	],
 	"ignorePaths": ["bun.lock", "dist", "coverage", "node_modules"]
 }

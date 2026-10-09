@@ -8,9 +8,15 @@ import { registerNotFound } from "@/packages/middlewares/not-found";
 import { registerRateLimiter } from "@/packages/middlewares/rate-limiter";
 import { registerRequestLogging } from "@/packages/middlewares/request-logging";
 import { registerSecurityHeaders } from "@/packages/middlewares/security-headers";
+import type { AuthPlugin } from "./auth/core/plugin";
 import { registerBootstrap } from "./routes";
 
-export const createApp = (): Elysia => {
+export interface CreateAppOptions {
+	/** Replace the sign-in methods (tests build an app around a fake provider). */
+	authPlugins?: readonly AuthPlugin[];
+}
+
+export const createApp = (options: CreateAppOptions = {}): Elysia => {
 	const app = new Elysia({
 		name: "api",
 	});
@@ -31,7 +37,7 @@ export const createApp = (): Elysia => {
 	registerCsrfProtection(app);
 
 	// 3. Routes. Unversioned first (/, /health), then the versioned API group.
-	registerBootstrap(app);
+	registerBootstrap(app, options.authPlugins);
 
 	// 4. Catch-all for anything unmatched. Must be LAST.
 	registerNotFound(app);

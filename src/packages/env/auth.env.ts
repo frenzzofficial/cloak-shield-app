@@ -39,6 +39,9 @@ const authEnvSchema = z
 		// When true, sign-up creates the account but issues no session until the email is
 		// verified, and sign-in refuses PENDING_VERIFICATION accounts.
 		AUTH_REQUIRE_EMAIL_VERIFICATION: z.stringbool().default(false),
+		// Accounts without a password (Google/Discord only) re-authenticate sensitive actions by a
+		// sign-in no older than this, instead of typing a password.
+		AUTH_REAUTH_WINDOW: durationSeconds("AUTH_REAUTH_WINDOW").prefault("10m"),
 		// "New device" alerts: a browser/OS combination not seen signing in within this window.
 		AUTH_NEW_DEVICE_WINDOW: durationSeconds("AUTH_NEW_DEVICE_WINDOW").prefault("90d"),
 		AUTH_VERIFY_TOKEN_TTL: durationSeconds("AUTH_VERIFY_TOKEN_TTL").prefault("24h"),

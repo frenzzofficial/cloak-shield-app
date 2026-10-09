@@ -15,6 +15,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
@@ -28,6 +29,7 @@ export const userStatusEnum = pgEnum("user_status", [
 ]);
 export const genderEnum = pgEnum("gender", ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
 export const themeEnum = pgEnum("theme", ["light", "dark", "system"]);
+export const oauthProviderEnum = pgEnum("oauth_provider", ["GOOGLE", "DISCORD"]);
 export const authTokenTypeEnum = pgEnum("auth_token_type", [
 	"EMAIL_VERIFICATION",
 	"PASSWORD_RESET",
@@ -52,7 +54,8 @@ export const userSecurity = pgTable("user_security", {
 	userId: uuid("user_id")
 		.primaryKey()
 		.references(() => users.id, { onDelete: "cascade" }),
-	passwordHash: text("password_hash").notNull(),
+	// NULL for accounts that only sign in through a provider (Google, Discord).
+	passwordHash: text("password_hash"),
 	twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
 	failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
 	lockedUntil: timestamp("locked_until", { withTimezone: true }),
@@ -146,6 +149,29 @@ export const authTokens = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [index("auth_tokens_user_id_idx").on(table.userId)],
+).enableRLS();
+
+// ── oauth_accounts ───────────────────────────────────────────────────────────
+// Which provider identities belong to which account. One account can have several (Google AND
+// Discord), but never two of the same provider, and one provider identity can never belong to
+// two accounts. No provider access/refresh tokens are stored: sign-in only needs to know WHO.
+export const oauthAccounts = pgTable(
+	"oauth_accounts",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		provider: oauthProviderEnum("provider").notNull(),
+		// The provider's stable subject id (Google `sub`, Discord user id), NOT the email.
+		providerUserId: text("provider_user_id").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		lastLoginAt: timestamp("last_login_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		uniqueIndex("oauth_accounts_provider_identity_uq").on(table.provider, table.providerUserId),
+		uniqueIndex("oauth_accounts_user_provider_uq").on(table.userId, table.provider),
+	],
 ).enableRLS();
 
 // ── audit_logs ───────────────────────────────────────────────────────────────

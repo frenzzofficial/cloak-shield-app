@@ -9,7 +9,9 @@ import {
 	wantsTokensInBody,
 } from "./auth-cookies";
 import { extractDeviceInfo } from "./device";
-import { requirePassword } from "./reauth";
+import { resolveExternalIdentity } from "./identity.service";
+import { callbackUrl, setOAuthStateCookie, takeOAuthStateCookie } from "./oauth-flow";
+import { requireReauth } from "./reauth";
 import { isBlocked, startSession } from "./session.service";
 
 // ── The contract ───────────────────────────────────────────────────────────────
@@ -29,11 +31,16 @@ export type AuthPluginId = "email" | "google" | "discord";
 /** "password": the user types credentials into our form. "oauth": we redirect to a provider. */
 export type AuthPluginKind = "password" | "oauth";
 
+/** Something a plugin needs from the server that another plugin (or, later, core) supplies. */
+export type AuthCapability = "session-routes";
+
 /** What a frontend may learn about a method: enough to draw a button, nothing sensitive. */
 export interface AuthPluginMeta {
 	id: AuthPluginId;
 	kind: AuthPluginKind;
 	label: string;
+	/** For "oauth" methods: the path a "Sign in with ..." button navigates to. */
+	startPath?: string;
 }
 
 export interface AuthPlugin extends AuthPluginMeta {
@@ -42,6 +49,17 @@ export interface AuthPlugin extends AuthPluginMeta {
 	 * /auth/providers, and must not require any of its configuration to be set.
 	 */
 	enabled: boolean;
+	/**
+	 * Server features this plugin supplies for the others. Today the email plugin owns refresh,
+	 * sign-out, /me, sessions and activity; they move to core later.
+	 */
+	provides?: readonly AuthCapability[];
+	/**
+	 * Server features this plugin cannot work without. Checked at boot, so a configuration that
+	 * would leave users signed in with no way to refresh or sign out fails loudly instead of
+	 * half-working.
+	 */
+	requires?: readonly AuthCapability[];
 	register(app: Elysia, core: AuthCore): void;
 }
 
@@ -62,7 +80,13 @@ export interface AuthCore {
 		wantsTokensInBody: typeof wantsTokensInBody;
 	};
 	readonly device: { extract: typeof extractDeviceInfo };
-	readonly reauth: { requirePassword: typeof requirePassword };
+	readonly identities: { resolve: typeof resolveExternalIdentity };
+	readonly oauth: {
+		setStateCookie: typeof setOAuthStateCookie;
+		takeStateCookie: typeof takeOAuthStateCookie;
+		callbackUrl: typeof callbackUrl;
+	};
+	readonly reauth: { require: typeof requireReauth };
 }
 
 export const createAuthCore = (): AuthCore =>
@@ -76,12 +100,23 @@ export const createAuthCore = (): AuthCore =>
 			wantsTokensInBody,
 		},
 		device: { extract: extractDeviceInfo },
-		reauth: { requirePassword },
+		identities: { resolve: resolveExternalIdentity },
+		oauth: {
+			setStateCookie: setOAuthStateCookie,
+			takeStateCookie: takeOAuthStateCookie,
+			callbackUrl,
+		},
+		reauth: { require: requireReauth },
 	});
 
 // ── The registry ───────────────────────────────────────────────────────────────
 
-const metaOf = ({ id, kind, label }: AuthPlugin): AuthPluginMeta => ({ id, kind, label });
+const metaOf = ({ id, kind, label, startPath }: AuthPlugin): AuthPluginMeta => ({
+	id,
+	kind,
+	label,
+	...(startPath === undefined ? {} : { startPath }),
+});
 
 /**
  * Mounts every ENABLED plugin and the public /auth/providers listing. Returns the metadata of
@@ -106,6 +141,19 @@ export const mountAuthPlugins = (
 	}
 
 	const enabled = plugins.filter((plugin) => plugin.enabled);
+
+	// Every capability an enabled plugin needs must be supplied by an enabled one.
+	const supplied = new Set(enabled.flatMap((plugin) => plugin.provides ?? []));
+	for (const plugin of enabled) {
+		for (const needed of plugin.requires ?? []) {
+			if (!supplied.has(needed)) {
+				throw new Error(
+					`Auth plugin "${plugin.id}" needs "${needed}" (token refresh, sign-out, /me), which no enabled plugin provides. Enable the email plugin (ENABLE_EMAIL_AUTH=true).`,
+				);
+			}
+		}
+	}
+
 	for (const plugin of enabled) plugin.register(app, core);
 
 	const providers = enabled.map(metaOf);

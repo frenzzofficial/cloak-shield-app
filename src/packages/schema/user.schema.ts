@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AuditEvent, AuditOutcome } from "@/packages/configs/audit.config";
 import type { AuthTokenType } from "@/packages/configs/auth-token.config";
 import { UserGenderValues } from "@/packages/configs/gender.config";
+import type { OAuthProvider } from "@/packages/configs/oauth-provider.config";
 import { UserRolesValues, userStatusValues } from "@/packages/configs/roles.config";
 import {
 	confirmPasswordRules,
@@ -49,7 +50,8 @@ export type UserProfile = z.infer<typeof userProfileSchema>;
 
 export const userSecuritySchema = z.object({
 	userId: z.uuid(),
-	passwordHash: z.string(),
+	// null for accounts that only sign in through a provider
+	passwordHash: z.string().nullable(),
 	twoFactorEnabled: z.boolean(),
 	failedLoginAttempts: z.number().int().nonnegative(),
 	lockedUntil: z.coerce.date().nullable(),
@@ -90,6 +92,17 @@ export interface AuthTokenRecord {
 	expiresAt: Date;
 	usedAt: Date | null;
 	createdAt: Date;
+}
+
+/** A provider identity linked to an account. Deliberately holds no provider tokens. */
+export interface OAuthAccountRecord {
+	id: string;
+	userId: string;
+	provider: OAuthProvider;
+	/** The provider's stable subject id (Google `sub`, Discord user id), never the email. */
+	providerUserId: string;
+	createdAt: Date;
+	lastLoginAt: Date;
 }
 
 /** One row of the security audit trail. */

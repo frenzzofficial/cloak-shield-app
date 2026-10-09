@@ -27,6 +27,7 @@ import { logger } from "@/packages/utils/logger";
 
 const repo = () => getAuthRepository();
 
+import { newPreferences, newProfile, newSecurity } from "@/app/auth/core/account-defaults";
 import { recordAudit } from "@/app/auth/core/audit.service";
 import type { DeviceInfo, SessionTokens } from "@/app/auth/core/auth.types";
 import {
@@ -115,44 +116,9 @@ export const signUp = async (
 				createdAt: now,
 				updatedAt: now,
 			},
-			security: {
-				userId: "", // filled in by createUserWithSession once the user id is known
-				passwordHash,
-				twoFactorEnabled: false,
-				failedLoginAttempts: 0,
-				lockedUntil: null,
-				lastPasswordChangedAt: now,
-				createdAt: now,
-				updatedAt: now,
-			},
-			profile: {
-				userId: "",
-				username: null,
-				bio: null,
-				phone: null,
-				birthDate: null,
-				gender: null,
-				timezone: null,
-				locale: null,
-				website: null,
-				twitterUrl: null,
-				githubUrl: null,
-				linkedinUrl: null,
-				createdAt: now,
-				updatedAt: now,
-			},
-			preferences: {
-				userId: "",
-				theme: "system",
-				language: "en",
-				emailNotifications: true,
-				pushNotifications: true,
-				marketingEmails: false,
-				reducedMotion: false,
-				highContrast: false,
-				createdAt: now,
-				updatedAt: now,
-			},
+			security: newSecurity(passwordHash, now),
+			profile: newProfile(now),
+			preferences: newPreferences(now),
 			session,
 		});
 	} catch (error) {
@@ -207,6 +173,15 @@ export const signIn = async (
 	if (security.lockedUntil && security.lockedUntil.getTime() > Date.now()) {
 		await verifyAgainstDummyHash(input.password);
 		await failed("locked", user.id);
+		throw invalidCredentials();
+	}
+
+	if (security.passwordHash === null) {
+		// A provider-only account has no password to guess. Same cost and same answer as a wrong
+		// password, so the response does not reveal that this address signs in another way. No
+		// failed attempt is counted: there is nothing here an attacker could be guessing at.
+		await verifyAgainstDummyHash(input.password);
+		await failed("no_password", user.id);
 		throw invalidCredentials();
 	}
 
@@ -372,10 +347,13 @@ export const signOut = async (
 
 // ── Me / sessions ──────────────────────────────────────────────────────────────
 
-export const getMe = async (userId: string): Promise<User> => {
-	const user = await repo().findUserById(userId);
+export const getMe = async (userId: string): Promise<{ user: User; hasPassword: boolean }> => {
+	const [user, security] = await Promise.all([
+		repo().findUserById(userId),
+		repo().getUserSecurity(userId),
+	]);
 	if (!user) throw AppError.notFound("User not found");
-	return user;
+	return { user, hasPassword: security?.passwordHash != null };
 };
 
 export const listSessions = async (userId: string): Promise<UserSession[]> => {

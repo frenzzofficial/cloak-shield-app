@@ -303,11 +303,12 @@ export const registerEmailAuthRoutes = (app: Elysia, core: AuthCore): void => {
 			.get(
 				route.me,
 				async ({ user, status }) => {
-					const me = await getMe(user.userId);
+					const { user: me, hasPassword } = await getMe(user.userId);
 					return status(200, {
 						success: true,
 						message: "User fetched successfully",
-						user: publicUser(me),
+						// hasPassword tells a frontend whether to offer "change" or "set" password.
+						user: { ...publicUser(me), hasPassword },
 					});
 				},
 				{
@@ -370,14 +371,16 @@ export const registerEmailAuthRoutes = (app: Elysia, core: AuthCore): void => {
 			.post(
 				route.changePassword,
 				async ({ user, body, request, server, status }) => {
-					const { revokedSessions } = await changePassword(
+					const { revokedSessions, wasSet } = await changePassword(
 						user,
 						body,
 						device.extract(request, server),
 					);
 					return status(200, {
 						success: true,
-						message: "Password changed. Your other devices were signed out.",
+						message: wasSet
+							? "Password set. You can now sign in with your email and password too."
+							: "Password changed. Your other devices were signed out.",
 						revokedSessions,
 					});
 				},
@@ -386,7 +389,7 @@ export const registerEmailAuthRoutes = (app: Elysia, core: AuthCore): void => {
 					beforeHandle: accountActionLimiter,
 					detail: detail(
 						"Change password",
-						"Needs the current password. Ends every other session and emails a notice.",
+						"Needs the current password (accounts without one use a recent sign-in instead, and this sets their first). Ends every other session and emails a notice.",
 					),
 				},
 			)

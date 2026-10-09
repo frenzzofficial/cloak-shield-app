@@ -16,7 +16,7 @@ import { registerStaticRoutes } from "./static/static.routes";
 // routes exist — middlewares, config, env, shared utils — which is what
 // `bun run arch`'s "packages-must-not-import-app" rule enforces: packages/* must never
 // import from app/*, only the reverse.
-export const registerBootstrap = (app: Elysia): void => {
+export const registerBootstrap = (app: Elysia, authPlugins?: readonly AuthPlugin[]): void => {
 	// ── Health check ──────────────────────────────────────────────────────────────
 	registerHealthRoutes(app);
 
@@ -29,7 +29,7 @@ export const registerBootstrap = (app: Elysia): void => {
 	// ── Versioned API routes ──────────────────────────────────────────────────────────────
 	registerApiRoutes(app);
 
-	registerIdentityRoutes(app);
+	registerIdentityRoutes(app, authPlugins);
 };
 
 /**

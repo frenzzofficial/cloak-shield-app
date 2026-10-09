@@ -4,10 +4,11 @@ import {
 	notifyEmailChanged,
 	notifyEmailChangeRequested,
 	notifyPasswordChanged,
+	notifyPasswordSet,
 	sendEmailChangeLink,
 } from "@/app/auth/core/auth-mail";
 import { issueEmailToken } from "@/app/auth/core/email-tokens";
-import { type AuthContext, requirePassword } from "@/app/auth/core/reauth";
+import { type AuthContext, requireReauth } from "@/app/auth/core/reauth";
 import { AuditEvents } from "@/packages/configs/audit.config";
 import { authConfig } from "@/packages/configs/auth.config";
 import { AuthTokenTypes } from "@/packages/configs/auth-token.config";
@@ -34,13 +35,13 @@ export const changePassword = async (
 	auth: AuthContext,
 	input: ChangePasswordBody,
 	device: DeviceInfo,
-): Promise<{ revokedSessions: number }> => {
-	const user = await requirePassword(
-		auth.userId,
-		input.currentPassword,
-		device,
-		"change_password",
-	);
+): Promise<{ revokedSessions: number; wasSet: boolean }> => {
+	const user = await requireReauth(auth, input.currentPassword, device, "change_password");
+
+	// An account that signed in through a provider has no password yet: this call ADDS one, so
+	// that the same email can also sign in with it. That is a different event for the user.
+	const security = await repo().getUserSecurity(auth.userId);
+	const wasSet = security?.passwordHash === null;
 
 	await repo().updateUserSecurity(auth.userId, {
 		passwordHash: await hashPassword(input.newPassword),
@@ -55,11 +56,13 @@ export const changePassword = async (
 		event: AuditEvents.PASSWORD_CHANGED,
 		userId: auth.userId,
 		device,
-		metadata: { revokedSessions },
+		metadata: { revokedSessions, firstPassword: wasSet },
 	});
-	await notifyPasswordChanged(user, device);
 
-	return { revokedSessions };
+	if (wasSet) await notifyPasswordSet(user, device);
+	else await notifyPasswordChanged(user, device);
+
+	return { revokedSessions, wasSet };
 };
 
 // ── Change email ───────────────────────────────────────────────────────────────
@@ -69,7 +72,7 @@ export const changeEmail = async (
 	input: ChangeEmailBody,
 	device: DeviceInfo,
 ): Promise<void> => {
-	const user = await requirePassword(auth.userId, input.password, device, "change_email");
+	const user = await requireReauth(auth, input.password, device, "change_email");
 	const newEmail = input.newEmail.trim().toLowerCase();
 
 	if (newEmail === user.email) {

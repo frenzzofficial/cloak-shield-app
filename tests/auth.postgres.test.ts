@@ -9,7 +9,9 @@ import {
 } from "@/packages/repository/drizzle/auth.repository";
 import { defineAccountFlowTests } from "./helpers/account-flow";
 import { defineAuthFlowTests } from "./helpers/auth-flow";
+import { defineGoogleFlowTests } from "./helpers/google-flow";
 import { pick } from "./helpers/http";
+import { defineIdentityTests } from "./helpers/identity-flow";
 
 // Runs the same HTTP flow suite against a real Postgres, which is the only way to check the SQL
 // (atomic lockout counter, compare-and-swap rotation, single-use tokens, unique constraints).
@@ -81,6 +83,19 @@ if (url) {
 
 	defineAuthFlowTests("email auth over HTTP (real Postgres)", backend);
 	defineAccountFlowTests("account security over HTTP (real Postgres)", backend);
+	defineGoogleFlowTests("Google sign-in over HTTP (real Postgres)", {
+		install: () => setAuthRepository(null),
+		auditDump: async () => JSON.stringify(await db.select().from(auditLogs)),
+	});
+	defineIdentityTests("provider identities over the core (real Postgres)", {
+		install: () => setAuthRepository(null),
+		backdateSignIn: async (sessionId, to) => {
+			await db
+				.update(userSessions)
+				.set({ createdAt: to })
+				.where(eq(userSessions.id, sessionId));
+		},
+	});
 } else {
 	describe.skip("email auth over HTTP (real Postgres) - set TEST_DATABASE_URL to run", () => {});
 }

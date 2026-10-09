@@ -13,5 +13,6 @@ export const emailPlugin: AuthPlugin = {
 	kind: "password",
 	label: "Email and password",
 	enabled: envAppConfig.ENABLE_EMAIL_AUTH,
+	provides: ["session-routes"],
 	register: (app, core) => registerEmailAuthRoutes(app, core),
 };

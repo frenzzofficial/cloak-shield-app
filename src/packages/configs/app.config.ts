@@ -68,6 +68,13 @@ export const appConfig = {
 			confirmEmailChange: "/confirm-email-change",
 			activity: "/activity",
 		},
+		authGoogle: {
+			base: "/auth/google",
+			// e.g. /api/v1/auth/google
+			path: `${base}/auth/google`,
+			start: "/start",
+			callback: "/callback",
+		},
 		authPhone: {
 			...authRoutes("/auth/phone"),
 			sendOtp: "/send-otp",
