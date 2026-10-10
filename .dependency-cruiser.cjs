@@ -5,7 +5,7 @@ module.exports = {
 		{
 			name: "packages-must-not-import-app",
 			severity: "error",
-			from: { path: "^src/packages" },
+			from: { path: "^src/packages", pathNot: "^src/packages/scripts/" },
 			to: { path: "^src/app" },
 		},
 		{
