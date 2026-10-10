@@ -18,7 +18,7 @@ for await (const file of new Bun.Glob("**/*.ts").scan(srcDir)) {
 }
 await symlink(resolve("node_modules"), join(outDir, "node_modules"));
 await writeFile(join(outDir, "package.json"), '{"type":"module"}');
-await cp(resolve("scripts/deploy-boot.mjs"), join(outDir, "boot.mjs"));
+await cp(resolve("./check-deploy.ts"), join(outDir, "boot.mjs"));
 
 const proc = Bun.spawn(["bun", "boot.mjs"], {
 	cwd: outDir,

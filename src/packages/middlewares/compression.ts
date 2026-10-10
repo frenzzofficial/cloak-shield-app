@@ -1,4 +1,5 @@
 import type { Elysia } from "elysia";
+import { ElysiaCustomStatusResponse } from "elysia/error";
 
 import { envAppConfig } from "../env/app.env";
 
@@ -26,11 +27,22 @@ export const registerCompression = (app: Elysia): void => {
 	app.mapResponse(({ responseValue, request, set }) => {
 		if (responseValue instanceof Response) return; // already a full Response; leave as-is
 
+		// A route that answers with `status(201, body)` reaches this hook as Elysia's
+		// `{ code, response }` wrapper, not as the body. Compressing the wrapper itself would send
+		// the client `{"code":201,"response":{...}}` instead of the body (only for responses over
+		// the size threshold, from clients that accept gzip: i.e. real browsers).
+		// Elysia types the wrapper's fields loosely, so read them through one explicit view.
+		const custom: { code: unknown; response: unknown } | undefined =
+			responseValue instanceof ElysiaCustomStatusResponse
+				? (responseValue as { code: unknown; response: unknown })
+				: undefined;
+		const payload: unknown = custom ? custom.response : responseValue;
+		const customCode = custom?.code;
+
 		const acceptEncoding = request.headers.get("accept-encoding") ?? "";
 		if (!acceptEncoding.includes("gzip")) return;
 
-		const body =
-			typeof responseValue === "string" ? responseValue : JSON.stringify(responseValue);
+		const body = typeof payload === "string" ? payload : JSON.stringify(payload);
 		const bytes = new TextEncoder().encode(body);
 		if (bytes.byteLength < MIN_BYTES_TO_COMPRESS) return;
 
@@ -40,7 +52,7 @@ export const registerCompression = (app: Elysia): void => {
 		headers.set("content-encoding", "gzip");
 		headers.set(
 			"content-type",
-			typeof responseValue === "string"
+			typeof payload === "string"
 				? "text/plain;charset=utf-8"
 				: "application/json;charset=utf-8",
 		);
@@ -51,7 +63,12 @@ export const registerCompression = (app: Elysia): void => {
 		}
 
 		return new Response(compressed, {
-			status: typeof set.status === "number" ? set.status : 200,
+			status:
+				typeof customCode === "number"
+					? customCode
+					: typeof set.status === "number"
+						? set.status
+						: 200,
 			headers,
 		});
 	});

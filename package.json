@@ -7,7 +7,7 @@
 		"arch": "depcruise src --config .dependency-cruiser.cjs",
 		"build:check": "bun build src/index.ts --outdir dist --target bun",
 		"check": "bun run verify",
-		"check:deploy": "bun scripts/check-deploy.ts",
+		"check:deploy": "bun src/packages/scripts/check-deploy.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",

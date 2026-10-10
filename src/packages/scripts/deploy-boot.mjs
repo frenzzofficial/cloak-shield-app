@@ -1,6 +1,6 @@
 // Runs inside the emulated deploy directory.
 try {
-	await import("./src/app/main.js");
+	await import("../../app/main.js");
 	// biome-ignore lint/suspicious/noConsole: CI script output
 	console.log("deploy check: every module resolves");
 } catch (error) {
